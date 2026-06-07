@@ -1,0 +1,12 @@
+DROP INDEX IF EXISTS idx_messages_friendship_id;
+DROP TABLE IF EXISTS chat.messages;
+DROP INDEX IF EXISTS idx_friendrequests_to_id;
+DROP INDEX IF EXISTS idx_friendrequests_from_id;
+DROP TABLE IF EXISTS chat.friendrequests;
+DROP INDEX IF EXISTS idx_friendships_user2_id;
+DROP INDEX IF EXISTS idx_friendships_user1_id;
+DROP TABLE IF EXISTS chat.friendships;
+DROP INDEX IF EXISTS idx_session_user_id;
+DROP TABLE IF EXISTS chat.sessions;
+DROP TABLE IF EXISTS chat.users;
+DROP SCHEMA IF EXISTS chat;
