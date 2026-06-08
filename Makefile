@@ -38,3 +38,7 @@ migrate-force:
 	-path ./migrations \
 	-database "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@chat-postgres:5432/${POSTGRES_DB}?sslmode=disable" \
 	force ${version}
+
+app-run:
+	@go mod tidy && \
+	go run ${PROJECT_ROOT}/cmd/chat/main.go
