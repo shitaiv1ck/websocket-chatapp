@@ -20,6 +20,14 @@ func NewResponseWriter(w http.ResponseWriter) *ResponseWriter {
 	}
 }
 
+func (rw *ResponseWriter) JsonResponse(body any, statusCode int) {
+	rw.WriteHeader(statusCode)
+
+	if err := json.NewEncoder(rw).Encode(body); err != nil {
+		panic(err)
+	}
+}
+
 func (rw *ResponseWriter) ErrorResponse(err error, msg string) {
 	statusCode := errStatusCode(err)
 	rw.WriteHeader(statusCode)
@@ -40,9 +48,25 @@ func (rw *ResponseWriter) WriteHeader(statusCode int) {
 	rw.statusCode = statusCode
 }
 
+func (rw *ResponseWriter) GetStatusCode() int {
+	return rw.statusCode
+}
+
 func errStatusCode(err error) int {
 	if errors.Is(err, core_errors.ErrCoockie) {
 		return http.StatusUnauthorized
+	}
+
+	if errors.Is(err, core_errors.ErrInvalidArg) {
+		return http.StatusBadRequest
+	}
+
+	if errors.Is(err, core_errors.ErrConflict) {
+		return http.StatusConflict
+	}
+
+	if errors.Is(err, core_errors.ErrNotFound) {
+		return http.StatusNotFound
 	}
 
 	return http.StatusInternalServerError

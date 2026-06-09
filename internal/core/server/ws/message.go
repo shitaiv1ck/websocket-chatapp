@@ -7,9 +7,3 @@ type Message struct {
 	To      int             `json:"to"`
 	Content json.RawMessage `json:"content"`
 }
-
-const (
-	FriendRequestType = "friend_request"
-	AcceptRequestType = "accept_request"
-	SendMessageType   = "send_message"
-)

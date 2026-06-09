@@ -2,7 +2,6 @@ package core_ws_server
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"sync"
 
@@ -10,6 +9,7 @@ import (
 	core_errors "github.com/shitaiv1ck/realtime-chat/internal/core/errors"
 	core_logger "github.com/shitaiv1ck/realtime-chat/internal/core/logger"
 	core_repsponse "github.com/shitaiv1ck/realtime-chat/internal/core/transport/repsponse"
+	core_utils "github.com/shitaiv1ck/realtime-chat/internal/core/utils"
 	"go.uber.org/zap"
 )
 
@@ -18,7 +18,7 @@ type Server struct {
 	join     chan *Client
 	leave    chan *Client
 	upgrader *websocket.Upgrader
-	mtx      sync.Mutex
+	mtx      sync.RWMutex
 	log      *core_logger.Logger
 }
 
@@ -36,7 +36,7 @@ func NewServer(logger *core_logger.Logger) *Server {
 			ReadBufferSize:  readBufferSize,
 			WriteBufferSize: writeBufferSize,
 		},
-		mtx: sync.Mutex{},
+		mtx: sync.RWMutex{},
 		log: logger,
 	}
 }
@@ -67,25 +67,21 @@ func (s *Server) Run(ctx context.Context) {
 	}
 }
 
-func (s *Server) MessageHandler(client *Client, msg []byte) {
-	var message Message
-	if err := json.Unmarshal(msg, &message); err != nil {
-		s.log.Error("unmarshal json", zap.Error(err))
-		return
-	}
+func (s *Server) Broadcast(msg []byte) {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
 
-	switch message.Type {
-	case FriendRequestType, AcceptRequestType, SendMessageType:
-		s.sendToClient(message.To, msg)
-	default:
-		s.log.Warn("invalid message type", zap.String("type", message.Type))
-		return
+	for _, client := range s.clients {
+		select {
+		case client.receive <- msg:
+		default:
+		}
 	}
 }
 
-func (s *Server) sendToClient(id int, msg []byte) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+func (s *Server) NotifyClient(id int, msg []byte) {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
 
 	client, ok := s.clients[id]
 	if !ok {
@@ -101,15 +97,10 @@ func (s *Server) sendToClient(id int, msg []byte) {
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	responseHandler := core_repsponse.NewResponseWriter(w)
 
-	userID := req.Context().Value("user_id")
-	if userID == nil {
+	userID, err := core_utils.GetIntFromContext(req.Context(), "user_id")
+	if err != nil {
 		responseHandler.ErrorResponse(core_errors.ErrCoockie, "failed to authentication")
-		return
-	}
 
-	id, ok := userID.(int)
-	if !ok {
-		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
@@ -119,7 +110,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	client := NewClient(id, socket, s)
+	client := NewClient(*userID, socket, s)
 
 	s.join <- client
 

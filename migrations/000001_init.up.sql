@@ -3,7 +3,8 @@ CREATE SCHEMA chat;
 CREATE TABLE chat.users(
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE CHECK(char_length(username) between 3 and 100),
-    password_hash VARCHAR(255) NOT NULL
+    password_hash VARCHAR(255) NOT NULL,
+    is_online BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE chat.sessions(
