@@ -41,6 +41,10 @@ func NewServer(logger *core_logger.Logger) *Server {
 	}
 }
 
+func (s *Server) GetLogger() *core_logger.Logger {
+	return s.log
+}
+
 func (s *Server) Run(ctx context.Context) {
 	s.log.Debug("start ws server")
 	for {

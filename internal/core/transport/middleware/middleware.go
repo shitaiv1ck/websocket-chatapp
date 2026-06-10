@@ -28,3 +28,10 @@ func CommonMiddleware(h http.Handler, log *core_logger.Logger) http.Handler {
 		Trace(),
 	)
 }
+
+func ProtectedMiddleware(h http.Handler, service SessionsService) http.Handler {
+	return ChainMiddleware(
+		h,
+		Authorization(service),
+	)
+}

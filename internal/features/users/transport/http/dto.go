@@ -18,15 +18,20 @@ type GetUserResponse struct {
 	IsOnline bool   `json:"is_online"`
 }
 
+type GetMeResponse struct {
+	ID       int    `json:"id"`
+	Username string `json:"username"`
+}
+
 type PatchUserRequest struct {
-	Username domains.Nullable[string] `json:"username"`
-	IsOnline domains.Nullable[bool]   `json:"is_online"`
+	Username    domains.Nullable[string] `json:"username"`
+	OldPassword domains.Nullable[string] `json:"old_password"`
+	NewPassword domains.Nullable[string] `json:"new_password"`
 }
 
 type PatchUserResponse struct {
 	ID       int    `json:"id"`
 	Username string `json:"username"`
-	IsOnline bool   `json:"is_online"`
 }
 
 func usersToResponse(users []domains.User) []GetUserResponse {

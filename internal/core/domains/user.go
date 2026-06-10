@@ -38,9 +38,16 @@ func (u *User) GeneratePasswordHash() error {
 	return nil
 }
 
+func (u *User) ComparePassword(password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password))
+
+	return err == nil
+}
+
 type UserPatch struct {
-	Username Nullable[string]
-	IsOnline Nullable[bool]
+	Username    Nullable[string]
+	OldPassword Nullable[string]
+	NewPassword Nullable[string]
 }
 
 func (u *UserPatch) Validate() error {
@@ -48,18 +55,18 @@ func (u *UserPatch) Validate() error {
 		return fmt.Errorf("'username' can't be null: %w", core_errors.ErrInvalidArg)
 	}
 
-	if u.IsOnline.Set && u.IsOnline.Value == nil {
-		return fmt.Errorf("'isOnline' can't be null: %w", core_errors.ErrInvalidArg)
+	if u.OldPassword.Set && u.OldPassword.Value == nil {
+		return fmt.Errorf("'old_password' can't be null: %w", core_errors.ErrInvalidArg)
+	}
+
+	if u.NewPassword.Set && u.NewPassword.Value == nil {
+		return fmt.Errorf("'new_password' can't be null: %w", core_errors.ErrInvalidArg)
 	}
 
 	return nil
 }
 
 func (u *User) ApplyPatch(patch UserPatch) error {
-	if err := patch.Validate(); err != nil {
-		return err
-	}
-
 	temp := *u
 
 	if patch.Username.Set {
@@ -70,8 +77,15 @@ func (u *User) ApplyPatch(patch UserPatch) error {
 		temp.Username = *patch.Username.Value
 	}
 
-	if patch.IsOnline.Set {
-		temp.IsOnline = *patch.IsOnline.Value
+	if patch.NewPassword.Set {
+		if len([]rune(*patch.NewPassword.Value)) < 8 || len([]rune(*patch.NewPassword.Value)) > 100 {
+			return fmt.Errorf("len 'password' must be between 8 and 100: %w", core_errors.ErrInvalidArg)
+		}
+
+		temp.Password = *patch.NewPassword.Value
+		if err := temp.GeneratePasswordHash(); err != nil {
+			return fmt.Errorf("failed to generate password hash")
+		}
 	}
 
 	*u = temp

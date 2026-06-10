@@ -2,17 +2,21 @@
 
 ```
 chat
+├─ api.md
 ├─ architecture.md
 ├─ cmd
 │  └─ chat
 │     └─ main.go
 ├─ docker-compose.yaml
+├─ docs
+│  └─ diagram.png
 ├─ go.mod
 ├─ go.sum
 ├─ internal
 │  ├─ core
 │  │  ├─ domains
 │  │  │  ├─ nullable.go
+│  │  │  ├─ session.go
 │  │  │  └─ user.go
 │  │  ├─ errors
 │  │  │  └─ errors.go
@@ -41,10 +45,20 @@ chat
 │  │  │  │  └─ response.go
 │  │  │  └─ request
 │  │  │     ├─ decode.go
+│  │  │     ├─ method.go
 │  │  │     └─ pathvalue.go
 │  │  └─ utils
 │  │     └─ context.go
 │  └─ features
+│     ├─ sessions
+│     │  ├─ repository
+│     │  │  └─ repository.go
+│     │  ├─ service
+│     │  │  └─ service.go
+│     │  └─ transport
+│     │     └─ http
+│     │        ├─ dto.go
+│     │        └─ transport.go
 │     └─ users
 │        ├─ repository
 │        │  └─ repository.go
