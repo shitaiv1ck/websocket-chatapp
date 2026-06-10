@@ -69,5 +69,13 @@ func errStatusCode(err error) int {
 		return http.StatusNotFound
 	}
 
+	if errors.Is(err, core_errors.ErrUnauthenticate) {
+		return http.StatusUnauthorized
+	}
+
+	if errors.Is(err, core_errors.ErrUnauthorize) {
+		return http.StatusUnauthorized
+	}
+
 	return http.StatusInternalServerError
 }

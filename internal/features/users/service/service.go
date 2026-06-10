@@ -4,10 +4,12 @@ import (
 	"fmt"
 
 	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
+	core_errors "github.com/shitaiv1ck/realtime-chat/internal/core/errors"
 )
 
 type UsersService struct {
-	rep UsersRepository
+	rep         UsersRepository
+	broadcaster UsersWSTransport
 }
 
 type UsersRepository interface {
@@ -17,9 +19,14 @@ type UsersRepository interface {
 	Update(user domains.User) (domains.User, error)
 }
 
-func NewService(rep UsersRepository) *UsersService {
+type UsersWSTransport interface {
+	BroadcastEvent(event string, user domains.User)
+}
+
+func NewService(rep UsersRepository, broadcaster UsersWSTransport) *UsersService {
 	return &UsersService{
-		rep: rep,
+		rep:         rep,
+		broadcaster: broadcaster,
 	}
 }
 
@@ -37,6 +44,8 @@ func (s *UsersService) CreateUser(user domains.User) (domains.User, error) {
 		return domains.User{}, fmt.Errorf("failed to create user: %w", err)
 	}
 
+	s.broadcaster.BroadcastEvent("new_user", createdUser)
+
 	return createdUser, nil
 }
 
@@ -49,10 +58,29 @@ func (s *UsersService) GetUsers() ([]domains.User, error) {
 	return users, err
 }
 
-func (s *UsersService) PatchUser(id int, patch domains.UserPatch) (domains.User, error) {
-	user, err := s.rep.FindByID(id)
+func (s *UsersService) GetUser(userID int) (domains.User, error) {
+	user, err := s.rep.FindByID(userID)
 	if err != nil {
 		return domains.User{}, fmt.Errorf("failed to get user from repository: %w", err)
+	}
+
+	return user, nil
+}
+
+func (s *UsersService) PatchUser(userID int, patch domains.UserPatch) (domains.User, error) {
+	user, err := s.rep.FindByID(userID)
+	if err != nil {
+		return domains.User{}, fmt.Errorf("failed to get user from repository: %w", err)
+	}
+
+	if err := patch.Validate(); err != nil {
+		return domains.User{}, fmt.Errorf("failed to validate patch: %w", err)
+	}
+
+	if patch.OldPassword.Set {
+		if !user.ComparePassword(*patch.OldPassword.Value) {
+			return domains.User{}, fmt.Errorf("invalid password: %w", core_errors.ErrInvalidArg)
+		}
 	}
 
 	if err := user.ApplyPatch(patch); err != nil {
@@ -64,5 +92,9 @@ func (s *UsersService) PatchUser(id int, patch domains.UserPatch) (domains.User,
 		return domains.User{}, fmt.Errorf("failed to patch user: %w", err)
 	}
 
-	return patchedUser, err
+	if patch.Username.Set {
+		s.broadcaster.BroadcastEvent("changed_username", patchedUser)
+	}
+
+	return patchedUser, nil
 }

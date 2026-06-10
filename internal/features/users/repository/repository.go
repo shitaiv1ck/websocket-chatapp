@@ -103,25 +103,56 @@ func (r *UsersRepository) FindByID(id int) (domains.User, error) {
 	return user, nil
 }
 
+func (r *UsersRepository) FindByUsername(username string) (domains.User, error) {
+	query := `
+		SELECT * FROM chat.users
+		WHERE username = $1;
+	`
+
+	var user domains.User
+	if err := r.store.QueryRow(
+		query,
+		username,
+	).Scan(
+		&user.ID,
+		&user.Username,
+		&user.PasswordHash,
+		&user.IsOnline,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domains.User{}, core_errors.ErrNotFound
+		}
+
+		return domains.User{}, err
+	}
+
+	return user, nil
+}
+
 func (r *UsersRepository) Update(user domains.User) (domains.User, error) {
 	query := `
 		UPDATE chat.users
-		SET username = $1, is_online = $2
+		SET username = $1, password_hash = $2
 		WHERE id = $3
-		RETURNING id, username, is_online;
+		RETURNING id, username;
 	`
 
 	var patchedUser domains.User
 	if err := r.store.QueryRow(
 		query,
 		user.Username,
-		user.IsOnline,
+		user.PasswordHash,
 		user.ID,
 	).Scan(
 		&patchedUser.ID,
 		&patchedUser.Username,
-		&patchedUser.IsOnline,
 	); err != nil {
+		if errPQ, ok := err.(*pq.Error); ok {
+			if errPQ.Code == "23505" {
+				return domains.User{}, core_errors.ErrConflict
+			}
+		}
+
 		return domains.User{}, err
 	}
 
