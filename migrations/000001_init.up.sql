@@ -16,7 +16,6 @@ CREATE TABLE chat.sessions(
 
     CHECK(expires_at >= created_at)
 );
-CREATE INDEX idx_session_user_id ON chat.sessions(user_id);
 
 CREATE TABLE chat.friendships(
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

@@ -48,19 +48,21 @@ func (r *UsersRepository) Save(user domains.User) (domains.User, error) {
 	return createdUser, nil
 }
 
-func (r *UsersRepository) FindAll() ([]domains.User, error) {
+func (r *UsersRepository) FindAll(limit *int, offset *int) ([]domains.User, error) {
 	query := `
 		SELECT id, username, is_online
-		FROM chat.users;
+		FROM chat.users
+		LIMIT $1
+		OFFSET $2;
 	`
 
-	rows, err := r.store.Query(query)
+	rows, err := r.store.Query(query, limit, offset)
 	if err != nil {
 		return []domains.User{}, err
 	}
 	defer rows.Close()
 
-	var users []domains.User
+	users := make([]domains.User, 0)
 	for rows.Next() {
 		var user domains.User
 		if err := rows.Scan(

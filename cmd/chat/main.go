@@ -11,6 +11,10 @@ import (
 	core_ws_server "github.com/shitaiv1ck/realtime-chat/internal/core/server/ws"
 	core_postgres "github.com/shitaiv1ck/realtime-chat/internal/core/store/postgres"
 	core_middleware "github.com/shitaiv1ck/realtime-chat/internal/core/transport/middleware"
+	friendrequests_respository "github.com/shitaiv1ck/realtime-chat/internal/features/friendrequests/respository"
+	friendrequests_service "github.com/shitaiv1ck/realtime-chat/internal/features/friendrequests/service"
+	friendrequests_http_transport "github.com/shitaiv1ck/realtime-chat/internal/features/friendrequests/transport/http"
+	friendrequests_ws_transport "github.com/shitaiv1ck/realtime-chat/internal/features/friendrequests/transport/ws"
 	sessions_repository "github.com/shitaiv1ck/realtime-chat/internal/features/sessions/repository"
 	sessions_service "github.com/shitaiv1ck/realtime-chat/internal/features/sessions/service"
 	sessions_http_transport "github.com/shitaiv1ck/realtime-chat/internal/features/sessions/transport/http"
@@ -50,10 +54,19 @@ func main() {
 	sessionsService := sessions_service.NewService(sessionsRep, usersRep)
 	sessionsHTTP := sessions_http_transport.NewHTTPTransport(sessionsService)
 
+	log.Debug("init feature: friend-requests")
+	friendRequestsRep := friendrequests_respository.NewRepository(postgresStore)
+	friendRequestsWS := friendrequests_ws_transport.NewWSTransport(wsServer)
+	friendRequestsService := friendrequests_service.NewService(friendRequestsRep, usersRep, friendRequestsWS)
+	friendRequestsHTTP := friendrequests_http_transport.NewTransport(friendRequestsService)
+
 	protected := http.NewServeMux()
 	protected.Handle("GET /users/me", usersHTTP.GetMeHandler())
 	protected.Handle("PATCH /users", usersHTTP.PatchUserHandler())
 	protected.Handle("DELETE /sessions", sessionsHTTP.DeleteSessionHandler())
+	protected.Handle("POST /friend-requests", friendRequestsHTTP.CreateFriendRequestHandler())
+	protected.Handle("GET /friend-requests", friendRequestsHTTP.GetFriendRequestsHandler())
+	protected.Handle("DELETE /friend-requests/{friend_request_id}", friendRequestsHTTP.DeleteFriendRequestHandler())
 
 	protectedHandler := core_middleware.ProtectedMiddleware(protected, sessionsService)
 

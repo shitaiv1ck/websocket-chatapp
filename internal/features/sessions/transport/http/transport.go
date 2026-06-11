@@ -47,7 +47,7 @@ func (s *SessionsHTTPTransport) CreateSessionHandler() http.HandlerFunc {
 
 		userID, err := s.service.Authentication(user)
 		if err != nil {
-			responseHandler.ErrorResponse(err, "failed to authentication")
+			responseHandler.ErrorResponse(err, "failed to authenticate")
 
 			return
 		}

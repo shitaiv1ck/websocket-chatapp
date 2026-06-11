@@ -1,16 +1,53 @@
-# API ENDPOINTS
+# API References
 
-| Endpoint                              | Описание                              |
+**Base URL:** `http://localhost:8080/`
+
+## API ENDPOINTS
+
+| Эндпоинт                              | Описание                              |
 | ------------------------------------- | ------------------------------------- |
-| /ws                                   | Открытие websocket соединения         |
-| `POST` /api/users                     | Создание нового пользователя          |
-| `GET` /api/users                      | Получение всех пользователей          |
-| `GET` /api/protected/users/me         | Получение текущей сессии (необходимо пройти аутентификацию) |
-| `PATCH` /api/protected/users          | Изменение данных о пользователе       |
-| `POST` /api/sessions                  | Создание новой сессии                 |
-| `DELETE` /api/protected/sessions      | Удаление текущей сессии               |
+| /ws                                   | Открывает websocket соединение |
+| `POST` /api/users                     | Регистрирует нового пользователя |
+| `GET` /api/users?limit=&offset        | Возвращает список пользователей с заданными параметрами `limit` и `offset` (если не заданы, то возвращает всех пользователей) |
+| `GET` /api/protected/users/me         | Возвращает текущую сессию пользователя |
+| `PATCH` /api/protected/users          | Изменяет логин или пароль пользователя |
+| `POST` /api/sessions                  | Создает новую сессию для пользователя |
+| `DELETE` /api/protected/sessions      | Удаляет текущую сессию пользователя |
+| `POST` /api/protected/friend-requests | Отправляет заявку в друзья пользователю |
+| `GET` /api/protected/friend-requests?direction= | Возвращает исходящие (`direction=outgoing`) или входящие (`direction=incoming` или не задано) заявки в друзья |
+| `DELETE` /api/protected/friend-requests/{friend_request_id} | Отклоняет заявку в друзья |
 
-Для паттернов группы `/api/protected/` c **небезопасными методами** дополнительно проверятеся аутентификация + csrf токен, переданный в запросе под заголовком **X-CSRF-Token**
+### CSRF Protection
+
+ Для паттернов группы `/api/protected/*` обязательна пройденная аутентификация. Помимо этого, для методов `POST`, `PATCH`, `DELETE` в этой же группе обязателен заголовок `X-CSRF-Token`
+
+### Аутентификация
+
+После успешного `POST /api/sessions` сервер устанавливает cookie:
+- **Name:** `session_token`
+- **HttpOnly:** true
+- **SameSite:** Lax
+- **Max-Age:** 24 часа
+
+И
+
+- **Name:** `csrf_token`
+- **HttpOnly:** false
+- **SameSite:** Lax
+- **Max-Age:** 24 часа
+
+## Коды ответов
+
+| Код | Описание | В каких эндпоинтах |
+|-----|----------|---------------------|
+| 200 | Успешный GET/PATCH | `GET /api/users`, `GET /api/protected/users/me`, `PATCH /api/protected/users`, `GET /api/protected/friend-requests` |
+| 201 | Успешное создание | `POST /api/users`, `POST /api/sessions`, `POST /api/protected/friend-requests` |
+| 204 | Успешное удаление | `DELETE /api/protected/sessions`, `DELETE /api/protected/friend-requests` |
+| 400 | Ошибка валидации | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `DELETE /api/protected/friend-requests` |
+| 401 | Не авторизован | Все `/api/protected/*`, `POST /api/sessions` |
+| 404 | Ресурс не найден | `POST /api/protected/friend-requests` (если `to_user_id` не существует), `DELETE /api/protected/friend-requests` (если заявка не найдена) |
+| 409 | Конфликт (уже существует) | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/protected/friend-requests` (заявка уже отправлена) |
+| 500 | Внутренняя ошибка | Любой |
 
 ## Примеры JSON в теле запроса/ответа
 
@@ -19,8 +56,8 @@
 Request body:
 ```JSON
 {
-    "username": "some username",  
-    "password": "some password"  
+    "username": "some username", #required, min=3, max=100
+    "password": "some password"  #required, min=8, max=100
 }
 ```
 
@@ -61,7 +98,7 @@ Response body:
 **`GET` /api/users:**
 Request body:
 ```JSON
-{}
+(no body)
 ```
 
 Response body:
@@ -99,7 +136,7 @@ Response body:
 
 Request body:
 ```JSON
-{}
+(no body)
 ```
 
 Response body:
@@ -115,7 +152,7 @@ Response body:
 401 Unauthorized
 
 {
-    "error": "invalid coockie's files",
+    "error": "invalid cookie",
     "message": "check cookie"
 }
 ```
@@ -132,9 +169,9 @@ Response body:
 Request body:
 ```JSON
 {
-    "username": "NewUsername",
-    "old_password": "some password",
-    "new_password": "newpassword"
+    "username": "NewUsername",        #optional, not null
+    "old_password": "some password",  #optional, not null
+    "new_password": "newpassword"     #optional, not null
 }
 ```
 
@@ -159,15 +196,15 @@ Response body:
 409 Conflict
 
 {
-    "error": "failed to create user: already exists",
-    "message": "failed to create user"
+    "error": "failed to patch user: already exists",
+    "message": "failed to patch user"
 }
 ```
 ```JSON
 401 Unauthorized
 
 {
-    "error": "invalid coockie's files",
+    "error": "invalid cookie",
     "message": "check cookie"
 }
 ```
@@ -193,14 +230,14 @@ Response body:
 ```JSON
 201 Created
 
-{}
+(no body)
 ```
 ```JSON
 401 Unauthorized
 
 {
     "error": "invalid username or password",
-    "message": "failed to authentication"
+    "message": "failed to authenticate"
 }
 ```
 ```JSON
@@ -216,20 +253,20 @@ Response body:
 
 Request body:
 ```JSON
-{}
+(no body)
 ```
 
 Response body:
 ```JSON
 204 No Content
 
-{}
+(no body)
 ```
 ```JSON
 401 Unauthorized
 
 {
-    "error": "invalid coockie's files",
+    "error": "invalid cookie",
     "message": "check cookie"
 }
 ```
@@ -242,5 +279,151 @@ Response body:
 }
 ```
 
+**`POST` /api/protected/friend-requests**
 
+Request body:
+```JSON
+{
+    "to_user_id": 6
+}
+```
+
+Response body:
+```JSON
+201 Created
+
+{
+    "id": 7,
+    "from_user": {
+        "id": 2,
+        "username": "n1x"
+    },
+    "to_user": {
+        "id": 6,
+        "username": "Марк Аврелий"
+    },
+    "created_at": "2026-06-11T15:19:02.616126Z"
+}
+```
+```JSON
+401 Unauthorized
+
+{
+    "error": "invalid cookie",
+    "message": "check cookie"
+}
+```
+```JSON
+500 Internal Server Error
+
+{
+    "error": "some error",
+    "message": "some message"
+}
+```
+```JSON
+409 Conflict
+
+{
+    "error": "already exists",
+    "message": "failed to create friend request"
+}
+```
+
+**`GET` /api/protected/friend-requests**
+
+Request body:
+```JSON
+(no body)
+```
+
+Response body:
+```JSON
+200 OK
+
+[
+    {
+        "id": 1,
+        "from_user": {
+            "id": 2,
+            "username": "n1x"
+        },
+        "to_user": {
+            "id": 1,
+            "username": "keynysiro"
+        },
+        "created_at": "2026-06-11T07:28:08.255482Z"
+    },
+    {
+        "id": 6,
+        "from_user": {
+            "id": 2,
+            "username": "n1x"
+        },
+        "to_user": {
+            "id": 5,
+            "username": "shitai"
+        },
+        "created_at": "2026-06-11T11:51:48.460871Z"
+    },
+    {
+        "id": 7,
+        "from_user": {
+            "id": 2,
+            "username": "n1x"
+        },
+        "to_user": {
+            "id": 6,
+            "username": "Марк Аврелий"
+        },
+        "created_at": "2026-06-11T15:19:02.616126Z"
+    }
+]
+```
+```JSON
+401 Unauthorized
+
+{
+    "error": "invalid cookie",
+    "message": "check cookie"
+}
+```
+```JSON
+500 Internal Server Error
+
+{
+    "error": "some error",
+    "message": "some message"
+}
+```
+
+**`DELETE` /api/protected/friend-requests/{friend_request_id}**
+
+Request body:
+```JSON
+(no body)
+```
+
+Response body:
+```JSON
+204 No Content
+
+(no body)
+```
+```JSON
+401 Unauthorized
+
+{
+    "error": "invalid cookie",
+    "message": "check cookie"
+}
+```
+```JSON
+500 Internal Server Error
+
+{
+    "error": "some error",
+    "message": "some message"
+}
+```
 
