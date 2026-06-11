@@ -15,6 +15,7 @@ chat
 ├─ internal
 │  ├─ core
 │  │  ├─ domains
+│  │  │  ├─ friendrequest.go
 │  │  │  ├─ nullable.go
 │  │  │  ├─ session.go
 │  │  │  └─ user.go
@@ -46,10 +47,23 @@ chat
 │  │  │  └─ request
 │  │  │     ├─ decode.go
 │  │  │     ├─ method.go
-│  │  │     └─ pathvalue.go
+│  │  │     ├─ pathvalue.go
+│  │  │     └─ queryparam.go
 │  │  └─ utils
 │  │     └─ context.go
 │  └─ features
+│     ├─ friendrequests
+│     │  ├─ respository
+│     │  │  └─ repository.go
+│     │  ├─ service
+│     │  │  └─ service.go
+│     │  └─ transport
+│     │     ├─ http
+│     │     │  ├─ dto.go
+│     │     │  └─ transport.go
+│     │     └─ ws
+│     │        ├─ dto.go
+│     │        └─ transport.go
 │     ├─ sessions
 │     │  ├─ repository
 │     │  │  └─ repository.go

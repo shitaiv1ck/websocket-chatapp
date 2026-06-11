@@ -32,7 +32,7 @@ func (t *UsersWSTransport) BroadcastEvent(event string, user domains.User) {
 
 	msg, err := json.Marshal(message)
 	if err != nil {
-		t.ws.GetLogger().Error(event, zap.Error(err))
+		t.ws.GetLogger().Error("failed to create msg to broadcast", zap.Error(err))
 		return
 	}
 

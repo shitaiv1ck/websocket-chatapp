@@ -17,7 +17,7 @@ type UsersHTTPTransport struct {
 
 type UsersService interface {
 	CreateUser(user domains.User) (domains.User, error)
-	GetUsers() ([]domains.User, error)
+	GetUsers(limit *int, offset *int) ([]domains.User, error)
 	GetUser(userID int) (domains.User, error)
 	PatchUser(userID int, patch domains.UserPatch) (domains.User, error)
 }
@@ -72,14 +72,14 @@ func (t *UsersHTTPTransport) GetMeHandler() http.HandlerFunc {
 
 		userID, err := core_utils.GetIntFromContext(r.Context(), "user_id")
 		if err != nil {
-			responseHandler.ErrorResponse(core_errors.ErrUnauthorize, "failed to authorization")
+			responseHandler.ErrorResponse(core_errors.ErrUnauthorize, "failed to authorize")
 
 			return
 		}
 
 		user, err := t.service.GetUser(*userID)
 		if err != nil {
-			responseHandler.ErrorResponse(core_errors.ErrUnauthorize, "failed to authorization")
+			responseHandler.ErrorResponse(core_errors.ErrUnauthorize, "failed to authorize")
 
 			return
 		}
@@ -100,7 +100,21 @@ func (t *UsersHTTPTransport) GetUsersHandler() http.HandlerFunc {
 
 		log.Debug("invoke GetUsers handler")
 
-		users, err := t.service.GetUsers()
+		limit, err := core_request.GetIntQueryParam(r, "limit")
+		if err != nil {
+			responseHandler.ErrorResponse(err, "failed to get query param")
+
+			return
+		}
+
+		offset, err := core_request.GetIntQueryParam(r, "offset")
+		if err != nil {
+			responseHandler.ErrorResponse(err, "failed to get query param")
+
+			return
+		}
+
+		users, err := t.service.GetUsers(limit, offset)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to get users")
 
@@ -122,7 +136,7 @@ func (t *UsersHTTPTransport) PatchUserHandler() http.HandlerFunc {
 
 		userID, err := core_utils.GetIntFromContext(r.Context(), "user_id")
 		if err != nil {
-			responseHandler.ErrorResponse(core_errors.ErrUnauthorize, "failed to authorization")
+			responseHandler.ErrorResponse(core_errors.ErrUnauthorize, "failed to authorize")
 
 			return
 		}
