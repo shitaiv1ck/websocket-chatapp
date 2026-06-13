@@ -9,10 +9,10 @@ import (
 )
 
 type UsersWSTransport struct {
-	ws *core_ws_server.Server
+	ws core_ws_server.Broadcaster
 }
 
-func NewWSTransport(ws *core_ws_server.Server) *UsersWSTransport {
+func NewWSTransport(ws core_ws_server.Broadcaster) *UsersWSTransport {
 	return &UsersWSTransport{
 		ws: ws,
 	}

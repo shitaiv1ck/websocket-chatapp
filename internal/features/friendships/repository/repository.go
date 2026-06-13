@@ -22,7 +22,7 @@ func NewRepository(store core_postgres.Store) *FriendshipRepository {
 	}
 }
 
-func (r *FriendshipRepository) Save(ctx context.Context, fromUserID int, toUserID int) (domains.Friendship, error) {
+func (r *FriendshipRepository) SaveTx(ctx context.Context, tx core_postgres.SQLExecuter, fromUserID int, toUserID int) (domains.Friendship, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
 	defer cancel()
 
@@ -41,7 +41,7 @@ func (r *FriendshipRepository) Save(ctx context.Context, fromUserID int, toUserI
 	`
 
 	var createdFriendship domains.Friendship
-	if err := r.store.QueryRow(
+	if err := tx.QueryRow(
 		ctx,
 		query,
 		fromUserID,
@@ -65,6 +65,10 @@ func (r *FriendshipRepository) Save(ctx context.Context, fromUserID int, toUserI
 	}
 
 	return createdFriendship, nil
+}
+
+func (r *FriendshipRepository) Begin(ctx context.Context) (pgx.Tx, error) {
+	return r.store.Begin(ctx)
 }
 
 func (r *FriendshipRepository) FindByUsers(ctx context.Context, firstUserID int, secondUserID int) (domains.Friendship, error) {

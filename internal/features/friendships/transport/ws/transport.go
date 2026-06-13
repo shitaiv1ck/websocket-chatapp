@@ -9,10 +9,10 @@ import (
 )
 
 type FriendshipsWSTransport struct {
-	ws *core_ws_server.Server
+	ws core_ws_server.Broadcaster
 }
 
-func NewWSTransport(ws *core_ws_server.Server) *FriendshipsWSTransport {
+func NewWSTransport(ws core_ws_server.Broadcaster) *FriendshipsWSTransport {
 	return &FriendshipsWSTransport{
 		ws: ws,
 	}
