@@ -2,58 +2,58 @@ package core_postgres
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+	"time"
 
-	"go.uber.org/zap"
-
-	_ "github.com/lib/pq"
-	core_logger "github.com/shitaiv1ck/realtime-chat/internal/core/logger"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Store struct {
-	*sql.DB
+type Store interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Close()
 
-	config Config
-	log    *core_logger.Logger
+	GetTimeout() time.Duration
 }
 
-func NewStore(logger *core_logger.Logger) *Store {
-	return &Store{
-		config: NewConfigMust(),
-		log:    logger,
-	}
+type ConnPool struct {
+	*pgxpool.Pool
+	timeout time.Duration
 }
 
-func (s *Store) Open(ctx context.Context) error {
-	url := fmt.Sprintf(
+func NewConnPool(ctx context.Context, config Config) (*ConnPool, error) {
+	connString := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		s.config.User,
-		s.config.Password,
-		s.config.Host,
-		s.config.Port,
-		s.config.DB,
+		config.User,
+		config.Password,
+		config.Host,
+		config.Port,
+		config.DB,
 	)
 
-	s.log.Debug("open conn to postgres store")
-	db, err := sql.Open("postgres", url)
+	pgxconfig, err := pgxpool.ParseConfig(connString)
 	if err != nil {
-		s.log.Error("failed to open conn to postgres store", zap.Error(err))
-		return err
+		return nil, fmt.Errorf("failed to parse config to pgxconfig: %w", err)
 	}
 
-	if err := db.Ping(); err != nil {
-		s.log.Error("failed to ping conn to postgres store", zap.Error(err))
-		return err
+	pool, err := pgxpool.NewWithConfig(ctx, pgxconfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create conn pool: %w", err)
 	}
 
-	s.DB = db
+	if err := pool.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("failed to ping conn: %w", err)
+	}
 
-	go func() {
-		<-ctx.Done()
-		s.Close()
-		s.log.Debug("conn to postgres store is closed")
-	}()
+	return &ConnPool{
+		Pool:    pool,
+		timeout: config.Timeout,
+	}, nil
+}
 
-	return nil
+func (c *ConnPool) GetTimeout() time.Duration {
+	return c.timeout
 }

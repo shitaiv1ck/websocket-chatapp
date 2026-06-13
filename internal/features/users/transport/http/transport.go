@@ -1,6 +1,7 @@
 package users_http_transport
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
@@ -16,10 +17,10 @@ type UsersHTTPTransport struct {
 }
 
 type UsersService interface {
-	CreateUser(user domains.User) (domains.User, error)
-	GetUsers(limit *int, offset *int) ([]domains.User, error)
-	GetUser(userID int) (domains.User, error)
-	PatchUser(userID int, patch domains.UserPatch) (domains.User, error)
+	CreateUser(ctx context.Context, user domains.User) (domains.User, error)
+	GetUsers(ctx context.Context, limit *int, offset *int) ([]domains.User, error)
+	GetUser(ctx context.Context, userID int) (domains.User, error)
+	PatchUser(ctx context.Context, userID int, patch domains.UserPatch) (domains.User, error)
 }
 
 func NewHTTPTransport(service UsersService) *UsersHTTPTransport {
@@ -50,7 +51,7 @@ func (t *UsersHTTPTransport) CreateUserHandler() http.HandlerFunc {
 			Password: request.Password,
 		}
 
-		createdUser, err := t.service.CreateUser(user)
+		createdUser, err := t.service.CreateUser(r.Context(), user)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to create user")
 
@@ -83,7 +84,7 @@ func (t *UsersHTTPTransport) GetMeHandler() http.HandlerFunc {
 			return
 		}
 
-		user, err := t.service.GetUser(userID)
+		user, err := t.service.GetUser(r.Context(), userID)
 		if err != nil {
 			responseHandler.ErrorResponse(core_errors.ErrUnauthorize, "failed to authorize")
 
@@ -121,7 +122,7 @@ func (t *UsersHTTPTransport) GetUsersHandler() http.HandlerFunc {
 			return
 		}
 
-		users, err := t.service.GetUsers(limit, offset)
+		users, err := t.service.GetUsers(r.Context(), limit, offset)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to get users")
 
@@ -163,7 +164,7 @@ func (t *UsersHTTPTransport) PatchUserHandler() http.HandlerFunc {
 			NewPassword: request.NewPassword,
 		}
 
-		patchedUser, err := t.service.PatchUser(userID, patch)
+		patchedUser, err := t.service.PatchUser(r.Context(), userID, patch)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to patch user")
 

@@ -1,26 +1,30 @@
 package users_repository
 
 import (
-	"database/sql"
+	"context"
 	"errors"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
 	core_errors "github.com/shitaiv1ck/realtime-chat/internal/core/errors"
 	core_postgres "github.com/shitaiv1ck/realtime-chat/internal/core/store/postgres"
 )
 
 type UsersRepository struct {
-	store *core_postgres.Store
+	store core_postgres.Store
 }
 
-func NewRepository(store *core_postgres.Store) *UsersRepository {
+func NewRepository(store core_postgres.Store) *UsersRepository {
 	return &UsersRepository{
 		store: store,
 	}
 }
 
-func (r *UsersRepository) Save(user domains.User) (domains.User, error) {
+func (r *UsersRepository) Save(ctx context.Context, user domains.User) (domains.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		INSERT INTO chat.users(username, password_hash)
 		VALUES($1, $2)
@@ -29,6 +33,7 @@ func (r *UsersRepository) Save(user domains.User) (domains.User, error) {
 
 	var createdUser domains.User
 	if err := r.store.QueryRow(
+		ctx,
 		query,
 		user.Username,
 		user.PasswordHash,
@@ -36,7 +41,7 @@ func (r *UsersRepository) Save(user domains.User) (domains.User, error) {
 		&createdUser.ID,
 		&createdUser.Username,
 	); err != nil {
-		if errPQ, ok := err.(*pq.Error); ok {
+		if errPQ, ok := err.(*pgconn.PgError); ok {
 			if errPQ.Code == "23505" {
 				return domains.User{}, core_errors.ErrConflict
 			}
@@ -48,7 +53,10 @@ func (r *UsersRepository) Save(user domains.User) (domains.User, error) {
 	return createdUser, nil
 }
 
-func (r *UsersRepository) FindAll(limit *int, offset *int) ([]domains.User, error) {
+func (r *UsersRepository) FindAll(ctx context.Context, limit *int, offset *int) ([]domains.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		SELECT id, username, is_online
 		FROM chat.users
@@ -56,7 +64,7 @@ func (r *UsersRepository) FindAll(limit *int, offset *int) ([]domains.User, erro
 		OFFSET $2;
 	`
 
-	rows, err := r.store.Query(query, limit, offset)
+	rows, err := r.store.Query(ctx, query, limit, offset)
 	if err != nil {
 		return []domains.User{}, err
 	}
@@ -79,7 +87,10 @@ func (r *UsersRepository) FindAll(limit *int, offset *int) ([]domains.User, erro
 	return users, nil
 }
 
-func (r *UsersRepository) FindByID(id int) (domains.User, error) {
+func (r *UsersRepository) FindByID(ctx context.Context, id int) (domains.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		SELECT * FROM chat.users
 		WHERE id = $1;
@@ -87,6 +98,7 @@ func (r *UsersRepository) FindByID(id int) (domains.User, error) {
 
 	var user domains.User
 	if err := r.store.QueryRow(
+		ctx,
 		query,
 		id,
 	).Scan(
@@ -95,7 +107,7 @@ func (r *UsersRepository) FindByID(id int) (domains.User, error) {
 		&user.PasswordHash,
 		&user.IsOnline,
 	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return domains.User{}, core_errors.ErrNotFound
 		}
 
@@ -105,7 +117,10 @@ func (r *UsersRepository) FindByID(id int) (domains.User, error) {
 	return user, nil
 }
 
-func (r *UsersRepository) FindByUsername(username string) (domains.User, error) {
+func (r *UsersRepository) FindByUsername(ctx context.Context, username string) (domains.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		SELECT * FROM chat.users
 		WHERE username = $1;
@@ -113,6 +128,7 @@ func (r *UsersRepository) FindByUsername(username string) (domains.User, error) 
 
 	var user domains.User
 	if err := r.store.QueryRow(
+		ctx,
 		query,
 		username,
 	).Scan(
@@ -121,7 +137,7 @@ func (r *UsersRepository) FindByUsername(username string) (domains.User, error) 
 		&user.PasswordHash,
 		&user.IsOnline,
 	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return domains.User{}, core_errors.ErrNotFound
 		}
 
@@ -131,7 +147,10 @@ func (r *UsersRepository) FindByUsername(username string) (domains.User, error) 
 	return user, nil
 }
 
-func (r *UsersRepository) Update(user domains.User) (domains.User, error) {
+func (r *UsersRepository) Update(ctx context.Context, user domains.User) (domains.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		UPDATE chat.users
 		SET username = $1, password_hash = $2
@@ -141,6 +160,7 @@ func (r *UsersRepository) Update(user domains.User) (domains.User, error) {
 
 	var patchedUser domains.User
 	if err := r.store.QueryRow(
+		ctx,
 		query,
 		user.Username,
 		user.PasswordHash,
@@ -150,7 +170,7 @@ func (r *UsersRepository) Update(user domains.User) (domains.User, error) {
 		&patchedUser.Username,
 		&patchedUser.IsOnline,
 	); err != nil {
-		if errPQ, ok := err.(*pq.Error); ok {
+		if errPQ, ok := err.(*pgconn.PgError); ok {
 			if errPQ.Code == "23505" {
 				return domains.User{}, core_errors.ErrConflict
 			}

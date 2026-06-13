@@ -11,7 +11,7 @@ import (
 )
 
 type SessionsService interface {
-	GetSession(sessionToken string) (domains.Session, error)
+	GetSession(ctx context.Context, sessionToken string) (domains.Session, error)
 }
 
 const (
@@ -30,7 +30,7 @@ func Authorization(service SessionsService) Middleware {
 				return
 			}
 
-			session, err := service.GetSession(sessionToken.Value)
+			session, err := service.GetSession(r.Context(), sessionToken.Value)
 			if err != nil {
 				responseHandler.ErrorResponse(core_errors.ErrCoockie, "check cookie")
 

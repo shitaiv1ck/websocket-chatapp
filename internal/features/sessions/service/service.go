@@ -1,6 +1,7 @@
 package sessions_service
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -16,13 +17,13 @@ type SessionsService struct {
 }
 
 type SessionsRepository interface {
-	Save(session domains.Session) (domains.Session, error)
-	FindByToken(token string) (domains.Session, error)
-	Delete(token string) error
+	Save(ctx context.Context, session domains.Session) (domains.Session, error)
+	FindByToken(ctx context.Context, token string) (domains.Session, error)
+	Delete(ctx context.Context, token string) error
 }
 
 type UsersRepository interface {
-	FindByUsername(username string) (domains.User, error)
+	FindByUsername(ctx context.Context, username string) (domains.User, error)
 }
 
 func NewService(sessionsRep SessionsRepository, usersRep UsersRepository) *SessionsService {
@@ -32,12 +33,12 @@ func NewService(sessionsRep SessionsRepository, usersRep UsersRepository) *Sessi
 	}
 }
 
-func (s *SessionsService) Authentication(user domains.User) (int, error) {
+func (s *SessionsService) Authentication(ctx context.Context, user domains.User) (int, error) {
 	if err := user.Validate(); err != nil {
 		return -1, fmt.Errorf("failed to validate user: %w", err)
 	}
 
-	foundUser, err := s.usersRep.FindByUsername(user.Username)
+	foundUser, err := s.usersRep.FindByUsername(ctx, user.Username)
 	if err != nil {
 		return -1, core_errors.ErrUnauthenticate
 	}
@@ -49,7 +50,12 @@ func (s *SessionsService) Authentication(user domains.User) (int, error) {
 	return foundUser.ID, nil
 }
 
-func (s *SessionsService) CreateSession(userID int) (domains.Session, error) {
+func (s *SessionsService) CreateSession(ctx context.Context, user domains.User) (domains.Session, error) {
+	userID, err := s.Authentication(ctx, user)
+	if err != nil {
+		return domains.Session{}, fmt.Errorf("failed to authenticate: %w", err)
+	}
+
 	sessionToken, err := generateToken(32)
 	if err != nil {
 		return domains.Session{}, fmt.Errorf("failed to generate cookie token: %w", err)
@@ -71,7 +77,7 @@ func (s *SessionsService) CreateSession(userID int) (domains.Session, error) {
 		return domains.Session{}, fmt.Errorf("failed to validate session: %w", err)
 	}
 
-	createdSession, err := s.sessionsRep.Save(session)
+	createdSession, err := s.sessionsRep.Save(ctx, session)
 	if err != nil {
 		return domains.Session{}, err
 	}
@@ -79,8 +85,8 @@ func (s *SessionsService) CreateSession(userID int) (domains.Session, error) {
 	return createdSession, nil
 }
 
-func (s *SessionsService) GetSession(sessionToken string) (domains.Session, error) {
-	session, err := s.sessionsRep.FindByToken(sessionToken)
+func (s *SessionsService) GetSession(ctx context.Context, sessionToken string) (domains.Session, error) {
+	session, err := s.sessionsRep.FindByToken(ctx, sessionToken)
 	if err != nil {
 		return domains.Session{}, fmt.Errorf("failed to get session: %w", err)
 	}
@@ -92,8 +98,8 @@ func (s *SessionsService) GetSession(sessionToken string) (domains.Session, erro
 	return session, nil
 }
 
-func (s *SessionsService) DeleteSession(token string) error {
-	if err := s.sessionsRep.Delete(token); err != nil {
+func (s *SessionsService) DeleteSession(ctx context.Context, token string) error {
+	if err := s.sessionsRep.Delete(ctx, token); err != nil {
 		return err
 	}
 

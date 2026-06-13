@@ -38,10 +38,11 @@ func main() {
 	}
 
 	log.Debug("init postgres store...")
-	postgresStore := core_postgres.NewStore(log)
-	if err := postgresStore.Open(ctx); err != nil {
+	postgresStore, err := core_postgres.NewConnPool(ctx, core_postgres.NewConfigMust())
+	if err != nil {
 		panic(err)
 	}
+	defer postgresStore.Close()
 
 	log.Debug("init ws server...")
 	wsServer := core_ws_server.NewServer(log)

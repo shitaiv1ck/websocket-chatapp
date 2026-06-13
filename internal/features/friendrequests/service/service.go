@@ -1,6 +1,7 @@
 package friendrequests_service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -15,15 +16,15 @@ type FriendRequestsService struct {
 }
 
 type FriendRequestsRepository interface {
-	Save(request domains.FriendRequest) (domains.FriendRequest, error)
-	FindByFromIDAndToID(fromID int, toID int) (domains.FriendRequest, error)
-	FindByToID(toID int) ([]domains.FriendRequest, error)
-	FindByFromID(fromID int) ([]domains.FriendRequest, error)
-	Delete(userID int, requestID int) error
+	Save(ctx context.Context, request domains.FriendRequest) (domains.FriendRequest, error)
+	FindByFromIDAndToID(ctx context.Context, fromID int, toID int) (domains.FriendRequest, error)
+	FindByToID(ctx context.Context, toID int) ([]domains.FriendRequest, error)
+	FindByFromID(ctx context.Context, fromID int) ([]domains.FriendRequest, error)
+	Delete(ctx context.Context, userID int, requestID int) error
 }
 
 type FriendshipRepository interface {
-	FindByUsers(firstUserID int, secondUserID int) (domains.Friendship, error)
+	FindByUsers(ctx context.Context, firstUserID int, secondUserID int) (domains.Friendship, error)
 }
 
 type FriendRequestsWSTransport interface {
@@ -43,12 +44,12 @@ func NewService(
 	}
 }
 
-func (s *FriendRequestsService) CreateFriendRequest(request domains.FriendRequest) (domains.FriendRequest, error) {
+func (s *FriendRequestsService) CreateFriendRequest(ctx context.Context, request domains.FriendRequest) (domains.FriendRequest, error) {
 	if err := request.Validate(); err != nil {
 		return domains.FriendRequest{}, fmt.Errorf("failed to validate friend request: %w", err)
 	}
 
-	hasIncoming, err := s.hasIncomingFromTargetUser(request.ToUser.ID, request.FromUser.ID)
+	hasIncoming, err := s.hasIncomingFromTargetUser(ctx, request.ToUser.ID, request.FromUser.ID)
 	if err != nil {
 		return domains.FriendRequest{}, fmt.Errorf("failed to get friend request: %w", err)
 	}
@@ -57,7 +58,7 @@ func (s *FriendRequestsService) CreateFriendRequest(request domains.FriendReques
 		return domains.FriendRequest{}, fmt.Errorf("user with id=%v already sent friend request: %w", request.ToUser.ID, core_errors.ErrConflict)
 	}
 
-	areFriends, err := s.areFriends(request.FromUser.ID, request.ToUser.ID)
+	areFriends, err := s.areFriends(ctx, request.FromUser.ID, request.ToUser.ID)
 	if err != nil {
 		return domains.FriendRequest{}, fmt.Errorf("failed to get friendship: %w", err)
 	}
@@ -66,7 +67,7 @@ func (s *FriendRequestsService) CreateFriendRequest(request domains.FriendReques
 		return domains.FriendRequest{}, fmt.Errorf("user with id=%v already your friend: %w", request.ToUser.ID, core_errors.ErrConflict)
 	}
 
-	createdFriendRequest, err := s.friendRequestsRep.Save(request)
+	createdFriendRequest, err := s.friendRequestsRep.Save(ctx, request)
 	if err != nil {
 		return domains.FriendRequest{}, err
 	}
@@ -77,8 +78,8 @@ func (s *FriendRequestsService) CreateFriendRequest(request domains.FriendReques
 	return createdFriendRequest, nil
 }
 
-func (s *FriendRequestsService) hasIncomingFromTargetUser(toUserID int, fromUserID int) (bool, error) {
-	_, err := s.friendRequestsRep.FindByFromIDAndToID(toUserID, fromUserID)
+func (s *FriendRequestsService) hasIncomingFromTargetUser(ctx context.Context, toUserID int, fromUserID int) (bool, error) {
+	_, err := s.friendRequestsRep.FindByFromIDAndToID(ctx, toUserID, fromUserID)
 	if err != nil {
 		if errors.Is(err, core_errors.ErrNotFound) {
 			return false, nil
@@ -90,8 +91,8 @@ func (s *FriendRequestsService) hasIncomingFromTargetUser(toUserID int, fromUser
 	return true, nil
 }
 
-func (s *FriendRequestsService) areFriends(firstUserID int, secondUserID int) (bool, error) {
-	_, err := s.friendshipRep.FindByUsers(firstUserID, secondUserID)
+func (s *FriendRequestsService) areFriends(ctx context.Context, firstUserID int, secondUserID int) (bool, error) {
+	_, err := s.friendshipRep.FindByUsers(ctx, firstUserID, secondUserID)
 	if err != nil {
 		if errors.Is(err, core_errors.ErrNotFound) {
 			return false, nil
@@ -103,7 +104,7 @@ func (s *FriendRequestsService) areFriends(firstUserID int, secondUserID int) (b
 	return true, nil
 }
 
-func (s *FriendRequestsService) GetFriendRequests(userID int, direction *string) ([]domains.FriendRequest, error) {
+func (s *FriendRequestsService) GetFriendRequests(ctx context.Context, userID int, direction *string) ([]domains.FriendRequest, error) {
 	if direction == nil {
 		in := "incoming"
 		direction = &in
@@ -114,9 +115,9 @@ func (s *FriendRequestsService) GetFriendRequests(userID int, direction *string)
 
 	switch *direction {
 	case "incoming":
-		requests, err = s.friendRequestsRep.FindByToID(userID)
+		requests, err = s.friendRequestsRep.FindByToID(ctx, userID)
 	case "outgoing":
-		requests, err = s.friendRequestsRep.FindByFromID(userID)
+		requests, err = s.friendRequestsRep.FindByFromID(ctx, userID)
 	default:
 		return []domains.FriendRequest{}, fmt.Errorf("invalid direction '%s': %w", *direction, core_errors.ErrInvalidArg)
 	}
@@ -128,8 +129,8 @@ func (s *FriendRequestsService) GetFriendRequests(userID int, direction *string)
 	return requests, nil
 }
 
-func (s *FriendRequestsService) DeleteFriendRequest(userID int, requestID int) error {
-	if err := s.friendRequestsRep.Delete(userID, requestID); err != nil {
+func (s *FriendRequestsService) DeleteFriendRequest(ctx context.Context, userID int, requestID int) error {
+	if err := s.friendRequestsRep.Delete(ctx, userID, requestID); err != nil {
 		return err
 	}
 

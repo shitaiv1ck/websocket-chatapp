@@ -1,6 +1,7 @@
 package friendships_http_transport
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
@@ -16,9 +17,9 @@ type FriendshipsHTTPTransport struct {
 }
 
 type FriendshipsService interface {
-	CreateFriendship(userID int, requestID int) (domains.Friendship, error)
-	GetFriendships(userID int, limit *int, offset *int) ([]domains.Friendship, error)
-	DeleteFriendship(userID int, friendshipID int) error
+	CreateFriendship(ctx context.Context, userID int, requestID int) (domains.Friendship, error)
+	GetFriendships(ctx context.Context, userID int, limit *int, offset *int) ([]domains.Friendship, error)
+	DeleteFriendship(ctx context.Context, userID int, friendshipID int) error
 }
 
 func NewHTTPTransport(service FriendshipsService) *FriendshipsHTTPTransport {
@@ -48,7 +49,7 @@ func (t *FriendshipsHTTPTransport) CreateFriendshipHandler() http.HandlerFunc {
 			return
 		}
 
-		createdFriendship, err := t.service.CreateFriendship(userID, request.FriendRequestID)
+		createdFriendship, err := t.service.CreateFriendship(r.Context(), userID, request.FriendRequestID)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to create frienship")
 
@@ -101,7 +102,7 @@ func (t *FriendshipsHTTPTransport) GetFriendshipsHandler() http.HandlerFunc {
 			return
 		}
 
-		friendships, err := t.service.GetFriendships(userID, limit, offset)
+		friendships, err := t.service.GetFriendships(r.Context(), userID, limit, offset)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to get friendships")
 
@@ -135,7 +136,7 @@ func (t *FriendshipsHTTPTransport) DeleteFriendshipHandler() http.HandlerFunc {
 			return
 		}
 
-		if err := t.service.DeleteFriendship(userID, *friendshipID); err != nil {
+		if err := t.service.DeleteFriendship(r.Context(), userID, *friendshipID); err != nil {
 			responseHandler.ErrorResponse(err, "failed to delete friendship")
 
 			return
