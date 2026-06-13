@@ -19,14 +19,22 @@ func NewWSTransport(ws *core_ws_server.Server) *FriendRequestsWSTransport {
 }
 
 func (t *FriendRequestsWSTransport) NotifyClientEvent(userID int, event string, request domains.FriendRequest) {
-	content := FriendRequestDTO{
-		ID:        request.ID,
-		FromUser:  UserDTO{ID: request.FromUser.ID, Username: request.FromUser.Username},
-		ToUser:    UserDTO{ID: request.ToUser.ID, Username: request.ToUser.Username},
+	content := FriendRequestDTOResponse{
+		ID: request.ID,
+		FromUser: UserDTOResponse{
+			ID:       request.FromUser.ID,
+			Username: request.FromUser.Username,
+			IsOnline: request.FromUser.IsOnline,
+		},
+		ToUser: UserDTOResponse{
+			ID:       request.ToUser.ID,
+			Username: request.ToUser.Username,
+			IsOnline: request.ToUser.IsOnline,
+		},
 		CreatedAt: request.CreatedAt,
 	}
 
-	message := Message{
+	message := WebSocketMessage{
 		Type:    event,
 		Content: content,
 	}
@@ -42,7 +50,7 @@ func (t *FriendRequestsWSTransport) NotifyClientEvent(userID int, event string, 
 }
 
 func (t *FriendRequestsWSTransport) NotifyDeclinedRequest(userID int, requestID int) {
-	message := Message{
+	message := WebSocketMessage{
 		Type:    "declined_friend_request",
 		Content: map[string]int{"request_id": requestID},
 	}

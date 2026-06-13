@@ -28,6 +28,8 @@ func NewTransport(service FriendRequestsService) *FriendRequestsHTTPTransport {
 }
 
 func (t *FriendRequestsHTTPTransport) CreateFriendRequestHandler() http.HandlerFunc {
+	type CreateFriendRequestResponse FriendRequestDTOResponse
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		log := core_logger.FromContext(r.Context())
 		responseHandler := core_repsponse.NewResponseWriter(w)
@@ -49,8 +51,8 @@ func (t *FriendRequestsHTTPTransport) CreateFriendRequestHandler() http.HandlerF
 		}
 
 		friendRequest := domains.FriendRequest{
-			FromUser: domains.UserBrief{ID: *userID},
-			ToUser:   domains.UserBrief{ID: request.ToUserID},
+			FromUser: domains.User{ID: userID},
+			ToUser:   domains.User{ID: request.ToUserID},
 		}
 
 		createdFriendRequest, err := t.service.CreateFriendRequest(friendRequest)
@@ -61,9 +63,17 @@ func (t *FriendRequestsHTTPTransport) CreateFriendRequestHandler() http.HandlerF
 		}
 
 		response := CreateFriendRequestResponse{
-			ID:        createdFriendRequest.ID,
-			FromUser:  UserDTO{ID: createdFriendRequest.FromUser.ID, Username: createdFriendRequest.FromUser.Username},
-			ToUser:    UserDTO{ID: createdFriendRequest.ToUser.ID, Username: createdFriendRequest.ToUser.Username},
+			ID: createdFriendRequest.ID,
+			FromUser: UserDTOResponse{
+				ID:       createdFriendRequest.FromUser.ID,
+				Username: createdFriendRequest.FromUser.Username,
+				IsOnline: createdFriendRequest.FromUser.IsOnline,
+			},
+			ToUser: UserDTOResponse{
+				ID:       createdFriendRequest.ToUser.ID,
+				Username: createdFriendRequest.ToUser.Username,
+				IsOnline: createdFriendRequest.ToUser.IsOnline,
+			},
 			CreatedAt: createdFriendRequest.CreatedAt,
 		}
 
@@ -87,14 +97,14 @@ func (t *FriendRequestsHTTPTransport) GetFriendRequestsHandler() http.HandlerFun
 
 		direction := core_request.GetStringQueryParam(r, "direction")
 
-		friendRequests, err := t.service.GetFriendRequests(*userID, direction)
+		friendRequests, err := t.service.GetFriendRequests(userID, direction)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to get friend requests")
 
 			return
 		}
 
-		response := friendRequestsToResponse(friendRequests)
+		response := ToDTOResponse(friendRequests)
 
 		responseHandler.JsonResponse(response, http.StatusOK)
 	}
@@ -121,7 +131,7 @@ func (t *FriendRequestsHTTPTransport) DeleteFriendRequestHandler() http.HandlerF
 			return
 		}
 
-		if err := t.service.DeleteFriendRequest(*userID, *friendRequestID); err != nil {
+		if err := t.service.DeleteFriendRequest(userID, *friendRequestID); err != nil {
 			responseHandler.ErrorResponse(err, "failed to delete friend request")
 
 			return

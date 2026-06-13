@@ -136,7 +136,7 @@ func (r *UsersRepository) Update(user domains.User) (domains.User, error) {
 		UPDATE chat.users
 		SET username = $1, password_hash = $2
 		WHERE id = $3
-		RETURNING id, username;
+		RETURNING id, username, is_online;
 	`
 
 	var patchedUser domains.User
@@ -148,6 +148,7 @@ func (r *UsersRepository) Update(user domains.User) (domains.User, error) {
 	).Scan(
 		&patchedUser.ID,
 		&patchedUser.Username,
+		&patchedUser.IsOnline,
 	); err != nil {
 		if errPQ, ok := err.(*pq.Error); ok {
 			if errPQ.Code == "23505" {

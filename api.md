@@ -8,7 +8,7 @@
 | ------------------------------------- | ------------------------------------- |
 | /ws                                   | Открывает websocket соединение |
 | `POST` /api/users                     | Регистрирует нового пользователя |
-| `GET` /api/users?limit=&offset        | Возвращает список пользователей с заданными параметрами `limit` и `offset` (если не заданы, то возвращает всех пользователей) |
+| `GET` /api/users?limit=&offset=       | Возвращает список пользователей с заданными параметрами `limit` и `offset` (если не заданы, то возвращает всех пользователей) |
 | `GET` /api/protected/users/me         | Возвращает текущую сессию пользователя |
 | `PATCH` /api/protected/users          | Изменяет логин или пароль пользователя |
 | `POST` /api/sessions                  | Создает новую сессию для пользователя |
@@ -16,6 +16,9 @@
 | `POST` /api/protected/friend-requests | Отправляет заявку в друзья пользователю |
 | `GET` /api/protected/friend-requests?direction= | Возвращает исходящие (`direction=outgoing`) или входящие (`direction=incoming` или не задано) заявки в друзья |
 | `DELETE` /api/protected/friend-requests/{friend_request_id} | Отклоняет заявку в друзья |
+| `POST` /api/protected/friendships | Принимает заявку в друзья |
+| `GET` /api/protected/friendships?limit=&offset= | Возвращает список друзей с заданными параметрами `limit` и `offset` (если не заданы, то возвращает всех друзей)|
+| `DELETE` /api/protected/friendships/{friendships_id} | Удаляет друга |
 
 ### CSRF Protection
 
@@ -40,14 +43,14 @@
 
 | Код | Описание | В каких эндпоинтах |
 |-----|----------|---------------------|
-| 200 | Успешный GET/PATCH | `GET /api/users`, `GET /api/protected/users/me`, `PATCH /api/protected/users`, `GET /api/protected/friend-requests` |
-| 201 | Успешное создание | `POST /api/users`, `POST /api/sessions`, `POST /api/protected/friend-requests` |
-| 204 | Успешное удаление | `DELETE /api/protected/sessions`, `DELETE /api/protected/friend-requests` |
-| 400 | Ошибка валидации | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `DELETE /api/protected/friend-requests` |
+| 200 | Успешный GET | `GET /api/users`, `GET /api/protected/users/me`, `GET /api/protected/friend-requests`, `GET /api/protected/friendships` |
+| 201 | Успешное создание | `POST /api/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `POST /api/protected/friendships` |
+| 204 | Успешное удаление | `DELETE /api/protected/sessions`, `DELETE /api/protected/friend-requests/{friend_request_id}`, `DELETE /api/protected/friendships/{friendship_id}` |
+| 400 | Ошибка валидации | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `POST /api/protected/friendships` |
 | 401 | Не авторизован | Все `/api/protected/*`, `POST /api/sessions` |
-| 404 | Ресурс не найден | `POST /api/protected/friend-requests` (если `to_user_id` не существует), `DELETE /api/protected/friend-requests` (если заявка не найдена) |
-| 409 | Конфликт (уже существует) | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/protected/friend-requests` (заявка уже отправлена) |
-| 500 | Внутренняя ошибка | Любой |
+| 404 | Ресурс не найден | `POST /api/protected/friend-requests` (если `to_user_id` не существует), `DELETE /api/protected/friend-requests/{friend_request_id}` (если заявка не найдена), `POST /api/protected/friendships` (если `friend_request_id` не найден), `DELETE /api/protected/friendships/{friendship_id}` (если дружба не найдена) |
+| 409 | Конфликт (уже существует) | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/protected/friend-requests` (заявка уже отправлена или дружба уже существует) |
+| 500 | Внутренняя ошибка сервера | Любой |
 
 ## Примеры JSON в теле запроса/ответа
 
@@ -145,7 +148,8 @@ Response body:
 
 {
     "id": 3,
-    "username": "some username"
+    "username": "some username",
+    "is_online": true
 }
 ```
 ```JSON
@@ -296,11 +300,13 @@ Response body:
     "id": 7,
     "from_user": {
         "id": 2,
-        "username": "n1x"
+        "username": "n1x",
+        "is_online": false
     },
     "to_user": {
         "id": 6,
-        "username": "Марк Аврелий"
+        "username": "Марк Аврелий",
+        "is_online": false
     },
     "created_at": "2026-06-11T15:19:02.616126Z"
 }
@@ -346,11 +352,13 @@ Response body:
         "id": 1,
         "from_user": {
             "id": 2,
-            "username": "n1x"
+            "username": "n1x",
+            "is_online": false
         },
         "to_user": {
             "id": 1,
-            "username": "keynysiro"
+            "username": "keynysiro",
+            "is_online": false
         },
         "created_at": "2026-06-11T07:28:08.255482Z"
     },
@@ -358,11 +366,13 @@ Response body:
         "id": 6,
         "from_user": {
             "id": 2,
-            "username": "n1x"
+            "username": "n1x",
+            "is_online": false
         },
         "to_user": {
             "id": 5,
-            "username": "shitai"
+            "username": "shitai",
+            "is_online": false
         },
         "created_at": "2026-06-11T11:51:48.460871Z"
     },
@@ -370,11 +380,13 @@ Response body:
         "id": 7,
         "from_user": {
             "id": 2,
-            "username": "n1x"
+            "username": "n1x",
+            "is_online": false
         },
         "to_user": {
             "id": 6,
-            "username": "Марк Аврелий"
+            "username": "Марк Аврелий",
+            "is_online": false
         },
         "created_at": "2026-06-11T15:19:02.616126Z"
     }
@@ -411,6 +423,14 @@ Response body:
 (no body)
 ```
 ```JSON
+404 Not Found
+
+{
+    "error": "failed to delete friend request: friend request doesn't exist: not found",
+    "message": "failed to delete friend request"
+}
+```
+```JSON
 401 Unauthorized
 
 {
@@ -427,3 +447,149 @@ Response body:
 }
 ```
 
+**`POST` /api/protected/friendships**
+
+Request body:
+```JSON
+{
+    "friend_request_id": 8
+}
+```
+
+Response body:
+```JSON
+201 Created
+
+{
+    "id": 5,
+    "first_user": {
+        "id": 3,
+        "username": "n1x",
+        "is_online": false
+    },
+    "second_user": {
+        "id": 5,
+        "username": "n1x",
+        "is_online": false
+    }
+}
+```
+```JSON
+404 Not Found
+
+{
+    "error": "failed to get friend request from rep: not found",
+    "message": "failed to create frienship"
+}
+```
+```JSON
+401 Unauthorized
+
+{
+    "error": "invalid cookie",
+    "message": "check cookie"
+}
+```
+```JSON
+500 Internal Server Error
+
+{
+    "error": "some error",
+    "message": "some message"
+}
+```
+
+**`GET` /api/protected/friendships**
+
+Request body:
+```JSON
+(no body)
+```
+
+Response body:
+```JSON
+200 OK
+
+[
+    {
+        "id": 2,
+        "first_user": {
+            "id": 1,
+            "username": "Марк Аврелий",
+            "is_online": false
+        },
+        "second_user": {
+            "id": 3,
+            "username": "n1x",
+            "is_online": false
+        }
+    },
+    {
+        "id": 4,
+        "first_user": {
+            "id": 3,
+            "username": "n1x",
+            "is_online": false
+        },
+        "second_user": {
+            "id": 4,
+            "username": "KeynySiro",
+            "is_online": false
+        }
+    }
+]
+```
+```JSON
+401 Unauthorized
+
+{
+    "error": "invalid cookie",
+    "message": "check cookie"
+}
+```
+```JSON
+500 Internal Server Error
+
+{
+    "error": "some error",
+    "message": "some message"
+}
+```
+
+**`DELETE` /api/protected/friendships/{friendships_id}**
+
+Request body:
+```JSON
+(no body)
+```
+
+Response body:
+```JSON
+204 No Content
+
+(no body)
+```
+```JSON
+404 Not Found
+
+{
+    "error": "failed to delete friendship: friendship doesn't exist: not found",
+    "message": "failed to delete friendship"
+}
+```
+```JSON
+401 Unauthorized
+
+{
+    "error": "invalid cookie",
+    "message": "check cookie"
+}
+```
+```JSON
+500 Internal Server Error
+
+{
+    "error": "some error",
+    "message": "some message"
+}
+```

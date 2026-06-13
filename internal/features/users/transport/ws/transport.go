@@ -19,13 +19,13 @@ func NewWSTransport(ws *core_ws_server.Server) *UsersWSTransport {
 }
 
 func (t *UsersWSTransport) BroadcastEvent(event string, user domains.User) {
-	content := UserDTO{
+	content := UserDTOResponse{
 		ID:       user.ID,
 		Username: user.Username,
 		IsOnline: user.IsOnline,
 	}
 
-	message := Message{
+	message := WebSocketMessage{
 		Type:    event,
 		Content: content,
 	}

@@ -29,6 +29,9 @@ func NewHTTPTransport(service UsersService) *UsersHTTPTransport {
 }
 
 func (t *UsersHTTPTransport) CreateUserHandler() http.HandlerFunc {
+	type CreateUserRequest UserDTORequest
+	type CreateUserResponse UserDTOResponse
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		log := core_logger.FromContext(r.Context())
 		responseHandler := core_repsponse.NewResponseWriter(w)
@@ -57,6 +60,7 @@ func (t *UsersHTTPTransport) CreateUserHandler() http.HandlerFunc {
 		response := CreateUserResponse{
 			ID:       createdUser.ID,
 			Username: createdUser.Username,
+			IsOnline: false,
 		}
 
 		responseHandler.JsonResponse(response, http.StatusCreated)
@@ -64,6 +68,8 @@ func (t *UsersHTTPTransport) CreateUserHandler() http.HandlerFunc {
 }
 
 func (t *UsersHTTPTransport) GetMeHandler() http.HandlerFunc {
+	type GetMeResponse UserDTOResponse
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		log := core_logger.FromContext(r.Context())
 		responseHandler := core_repsponse.NewResponseWriter(w)
@@ -77,7 +83,7 @@ func (t *UsersHTTPTransport) GetMeHandler() http.HandlerFunc {
 			return
 		}
 
-		user, err := t.service.GetUser(*userID)
+		user, err := t.service.GetUser(userID)
 		if err != nil {
 			responseHandler.ErrorResponse(core_errors.ErrUnauthorize, "failed to authorize")
 
@@ -87,6 +93,7 @@ func (t *UsersHTTPTransport) GetMeHandler() http.HandlerFunc {
 		response := GetMeResponse{
 			ID:       user.ID,
 			Username: user.Username,
+			IsOnline: true,
 		}
 
 		responseHandler.JsonResponse(response, http.StatusOK)
@@ -121,13 +128,15 @@ func (t *UsersHTTPTransport) GetUsersHandler() http.HandlerFunc {
 			return
 		}
 
-		response := usersToResponse(users)
+		response := ToDTOResponse(users)
 
 		responseHandler.JsonResponse(response, http.StatusOK)
 	}
 }
 
 func (t *UsersHTTPTransport) PatchUserHandler() http.HandlerFunc {
+	type PatchUserResponse UserDTOResponse
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		log := core_logger.FromContext(r.Context())
 		responseHandler := core_repsponse.NewResponseWriter(w)
@@ -154,7 +163,7 @@ func (t *UsersHTTPTransport) PatchUserHandler() http.HandlerFunc {
 			NewPassword: request.NewPassword,
 		}
 
-		patchedUser, err := t.service.PatchUser(*userID, patch)
+		patchedUser, err := t.service.PatchUser(userID, patch)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to patch user")
 
@@ -164,6 +173,7 @@ func (t *UsersHTTPTransport) PatchUserHandler() http.HandlerFunc {
 		response := PatchUserResponse{
 			ID:       patchedUser.ID,
 			Username: patchedUser.Username,
+			IsOnline: patchedUser.IsOnline,
 		}
 
 		responseHandler.JsonResponse(response, http.StatusOK)
