@@ -1,6 +1,7 @@
 package friendships_service
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
@@ -14,14 +15,14 @@ type FriendshipsService struct {
 }
 
 type FriendshipsRepository interface {
-	Save(fromUserID int, toUserID int) (domains.Friendship, error)
-	FindByUserID(userID int, limit *int, offset *int) ([]domains.Friendship, error)
-	Delete(userID int, friendshipID int) error
+	Save(ctx context.Context, fromUserID int, toUserID int) (domains.Friendship, error)
+	FindByUserID(ctx context.Context, userID int, limit *int, offset *int) ([]domains.Friendship, error)
+	Delete(ctx context.Context, userID int, friendshipID int) error
 }
 
 type FriendRequestsRepository interface {
-	FindByIDAndToID(requestID int, toID int) (domains.FriendRequest, error)
-	Delete(userID int, requestID int) error
+	FindByIDAndToID(ctx context.Context, requestID int, toID int) (domains.FriendRequest, error)
+	Delete(ctx context.Context, userID int, requestID int) error
 }
 
 type FriendshipsWSTransport interface {
@@ -41,21 +42,21 @@ func NewService(
 	}
 }
 
-func (s *FriendshipsService) CreateFriendship(userID int, requestID int) (domains.Friendship, error) {
+func (s *FriendshipsService) CreateFriendship(ctx context.Context, userID int, requestID int) (domains.Friendship, error) {
 	if requestID <= 0 {
 		return domains.Friendship{}, fmt.Errorf("request id must be positive: %w", core_errors.ErrInvalidArg)
 	}
 
-	friendRequest, err := s.friendRequestsRep.FindByIDAndToID(requestID, userID)
+	friendRequest, err := s.friendRequestsRep.FindByIDAndToID(ctx, requestID, userID)
 	if err != nil {
 		return domains.Friendship{}, fmt.Errorf("failed to get friend request from rep: %w", err)
 	}
 
-	if err := s.friendRequestsRep.Delete(userID, requestID); err != nil {
+	if err := s.friendRequestsRep.Delete(ctx, userID, requestID); err != nil {
 		return domains.Friendship{}, fmt.Errorf("failed to delete friend request: %w", err)
 	}
 
-	createdFriendship, err := s.friendshipsRep.Save(friendRequest.FromUser.ID, friendRequest.ToUser.ID)
+	createdFriendship, err := s.friendshipsRep.Save(ctx, friendRequest.FromUser.ID, friendRequest.ToUser.ID)
 	if err != nil {
 		return domains.Friendship{}, fmt.Errorf("failed to create friendship: %w", err)
 	}
@@ -66,7 +67,7 @@ func (s *FriendshipsService) CreateFriendship(userID int, requestID int) (domain
 	return createdFriendship, nil
 }
 
-func (s *FriendshipsService) GetFriendships(userID int, limit *int, offset *int) ([]domains.Friendship, error) {
+func (s *FriendshipsService) GetFriendships(ctx context.Context, userID int, limit *int, offset *int) ([]domains.Friendship, error) {
 	if limit != nil && *limit < 0 {
 		return []domains.Friendship{}, fmt.Errorf("'limit' must be non negative: %w", core_errors.ErrInvalidArg)
 	}
@@ -75,7 +76,7 @@ func (s *FriendshipsService) GetFriendships(userID int, limit *int, offset *int)
 		return []domains.Friendship{}, fmt.Errorf("'offset' must be non negative: %w", core_errors.ErrInvalidArg)
 	}
 
-	friendships, err := s.friendshipsRep.FindByUserID(userID, limit, offset)
+	friendships, err := s.friendshipsRep.FindByUserID(ctx, userID, limit, offset)
 	if err != nil {
 		return []domains.Friendship{}, fmt.Errorf("failed to get friendships from rep: %w", err)
 	}
@@ -83,12 +84,12 @@ func (s *FriendshipsService) GetFriendships(userID int, limit *int, offset *int)
 	return friendships, nil
 }
 
-func (s *FriendshipsService) DeleteFriendship(userID int, friendshipID int) error {
+func (s *FriendshipsService) DeleteFriendship(ctx context.Context, userID int, friendshipID int) error {
 	if friendshipID <= 0 {
 		return fmt.Errorf("friendship id must be positive")
 	}
 
-	if err := s.friendshipsRep.Delete(userID, friendshipID); err != nil {
+	if err := s.friendshipsRep.Delete(ctx, userID, friendshipID); err != nil {
 		return fmt.Errorf("failed to delete friendship: %w", err)
 	}
 

@@ -1,27 +1,31 @@
 package friendships_repository
 
 import (
-	"database/sql"
+	"context"
 	"errors"
 	"fmt"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
 	core_errors "github.com/shitaiv1ck/realtime-chat/internal/core/errors"
 	core_postgres "github.com/shitaiv1ck/realtime-chat/internal/core/store/postgres"
 )
 
 type FriendshipRepository struct {
-	store *core_postgres.Store
+	store core_postgres.Store
 }
 
-func NewRepository(store *core_postgres.Store) *FriendshipRepository {
+func NewRepository(store core_postgres.Store) *FriendshipRepository {
 	return &FriendshipRepository{
 		store: store,
 	}
 }
 
-func (r *FriendshipRepository) Save(fromUserID int, toUserID int) (domains.Friendship, error) {
+func (r *FriendshipRepository) Save(ctx context.Context, fromUserID int, toUserID int) (domains.Friendship, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		WITH inserted AS (
 			INSERT INTO chat.friendships(user1_id, user2_id)
@@ -38,6 +42,7 @@ func (r *FriendshipRepository) Save(fromUserID int, toUserID int) (domains.Frien
 
 	var createdFriendship domains.Friendship
 	if err := r.store.QueryRow(
+		ctx,
 		query,
 		fromUserID,
 		toUserID,
@@ -50,7 +55,7 @@ func (r *FriendshipRepository) Save(fromUserID int, toUserID int) (domains.Frien
 		&createdFriendship.SecondUser.Username,
 		&createdFriendship.SecondUser.IsOnline,
 	); err != nil {
-		if errPQ, ok := err.(*pq.Error); ok {
+		if errPQ, ok := err.(*pgconn.PgError); ok {
 			if errPQ.Code == "23505" {
 				return domains.Friendship{}, core_errors.ErrNotFound
 			}
@@ -62,7 +67,10 @@ func (r *FriendshipRepository) Save(fromUserID int, toUserID int) (domains.Frien
 	return createdFriendship, nil
 }
 
-func (r *FriendshipRepository) FindByUsers(firstUserID int, secondUserID int) (domains.Friendship, error) {
+func (r *FriendshipRepository) FindByUsers(ctx context.Context, firstUserID int, secondUserID int) (domains.Friendship, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		SELECT * FROM chat.friendships
 		WHERE user1_id = LEAST($1::int, $2::int) AND user2_id = GREATEST($1::int, $2::int);
@@ -70,6 +78,7 @@ func (r *FriendshipRepository) FindByUsers(firstUserID int, secondUserID int) (d
 
 	var foundFriendship domains.Friendship
 	if err := r.store.QueryRow(
+		ctx,
 		query,
 		firstUserID,
 		secondUserID,
@@ -78,7 +87,7 @@ func (r *FriendshipRepository) FindByUsers(firstUserID int, secondUserID int) (d
 		&foundFriendship.FirstUser.ID,
 		&foundFriendship.SecondUser.ID,
 	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return domains.Friendship{}, core_errors.ErrNotFound
 		}
 
@@ -88,7 +97,10 @@ func (r *FriendshipRepository) FindByUsers(firstUserID int, secondUserID int) (d
 	return foundFriendship, nil
 }
 
-func (r *FriendshipRepository) FindByUserID(userID int, limit *int, offset *int) ([]domains.Friendship, error) {
+func (r *FriendshipRepository) FindByUserID(ctx context.Context, userID int, limit *int, offset *int) ([]domains.Friendship, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		SELECT f.id,
 			f.user1_id, u1.username, u1.is_online,
@@ -101,7 +113,7 @@ func (r *FriendshipRepository) FindByUserID(userID int, limit *int, offset *int)
 		OFFSET $3;
 	`
 
-	rows, err := r.store.Query(query, userID, limit, offset)
+	rows, err := r.store.Query(ctx, query, userID, limit, offset)
 	if err != nil {
 		return []domains.Friendship{}, err
 	}
@@ -128,21 +140,21 @@ func (r *FriendshipRepository) FindByUserID(userID int, limit *int, offset *int)
 	return friendships, nil
 }
 
-func (r *FriendshipRepository) Delete(userID int, friendshipID int) error {
+func (r *FriendshipRepository) Delete(ctx context.Context, userID int, friendshipID int) error {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		DELETE FROM chat.friendships
 		WHERE id = $1 AND (user1_id = $2 OR user2_id = $2);
 	`
 
-	result, err := r.store.Exec(query, friendshipID, userID)
+	result, err := r.store.Exec(ctx, query, friendshipID, userID)
 	if err != nil {
 		return err
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
+	rows := result.RowsAffected()
 
 	if rows != 1 {
 		return fmt.Errorf("friendship doesn't exist: %w", core_errors.ErrNotFound)

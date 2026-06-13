@@ -1,27 +1,31 @@
 package friendrequests_respository
 
 import (
-	"database/sql"
+	"context"
 	"errors"
 	"fmt"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
 	core_errors "github.com/shitaiv1ck/realtime-chat/internal/core/errors"
 	core_postgres "github.com/shitaiv1ck/realtime-chat/internal/core/store/postgres"
 )
 
 type FriendRequestsRepository struct {
-	store *core_postgres.Store
+	store core_postgres.Store
 }
 
-func NewRepository(store *core_postgres.Store) *FriendRequestsRepository {
+func NewRepository(store core_postgres.Store) *FriendRequestsRepository {
 	return &FriendRequestsRepository{
 		store: store,
 	}
 }
 
-func (r *FriendRequestsRepository) Save(request domains.FriendRequest) (domains.FriendRequest, error) {
+func (r *FriendRequestsRepository) Save(ctx context.Context, request domains.FriendRequest) (domains.FriendRequest, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		WITH inserted AS (
 			INSERT INTO chat.friendrequests(from_id, to_id)
@@ -39,6 +43,7 @@ func (r *FriendRequestsRepository) Save(request domains.FriendRequest) (domains.
 
 	var createdFriendRequest domains.FriendRequest
 	if err := r.store.QueryRow(
+		ctx,
 		query,
 		request.FromUser.ID,
 		request.ToUser.ID,
@@ -52,7 +57,7 @@ func (r *FriendRequestsRepository) Save(request domains.FriendRequest) (domains.
 		&createdFriendRequest.ToUser.IsOnline,
 		&createdFriendRequest.CreatedAt,
 	); err != nil {
-		if errPQ, ok := err.(*pq.Error); ok {
+		if errPQ, ok := err.(*pgconn.PgError); ok {
 			if errPQ.Code == "23505" {
 				return domains.FriendRequest{}, core_errors.ErrConflict
 			}
@@ -68,7 +73,10 @@ func (r *FriendRequestsRepository) Save(request domains.FriendRequest) (domains.
 	return createdFriendRequest, nil
 }
 
-func (r *FriendRequestsRepository) FindByFromIDAndToID(fromID int, toID int) (domains.FriendRequest, error) {
+func (r *FriendRequestsRepository) FindByFromIDAndToID(ctx context.Context, fromID int, toID int) (domains.FriendRequest, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		SELECT * FROM chat.friendrequests
 		WHERE from_id = $1 AND to_id = $2;
@@ -76,6 +84,7 @@ func (r *FriendRequestsRepository) FindByFromIDAndToID(fromID int, toID int) (do
 
 	var foundFriendRequest domains.FriendRequest
 	if err := r.store.QueryRow(
+		ctx,
 		query,
 		fromID,
 		toID,
@@ -85,7 +94,7 @@ func (r *FriendRequestsRepository) FindByFromIDAndToID(fromID int, toID int) (do
 		&foundFriendRequest.ToUser.ID,
 		&foundFriendRequest.CreatedAt,
 	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return domains.FriendRequest{}, core_errors.ErrNotFound
 		}
 
@@ -95,7 +104,10 @@ func (r *FriendRequestsRepository) FindByFromIDAndToID(fromID int, toID int) (do
 	return foundFriendRequest, nil
 }
 
-func (r *FriendRequestsRepository) FindByToID(toID int) ([]domains.FriendRequest, error) {
+func (r *FriendRequestsRepository) FindByToID(ctx context.Context, toID int) ([]domains.FriendRequest, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		SELECT r.id, r.from_id, ur.username, ur.is_online, r.to_id, ut.username, ut.is_online, r.created_at
 		FROM chat.friendrequests AS r
@@ -103,7 +115,7 @@ func (r *FriendRequestsRepository) FindByToID(toID int) ([]domains.FriendRequest
 		JOIN chat.users AS ut ON r.to_id = ut.id
 		WHERE r.to_id = $1;
 	`
-	rows, err := r.store.Query(query, toID)
+	rows, err := r.store.Query(ctx, query, toID)
 	if err != nil {
 		return []domains.FriendRequest{}, err
 	}
@@ -131,7 +143,10 @@ func (r *FriendRequestsRepository) FindByToID(toID int) ([]domains.FriendRequest
 	return friendRequests, nil
 }
 
-func (r *FriendRequestsRepository) FindByIDAndToID(requestID int, toID int) (domains.FriendRequest, error) {
+func (r *FriendRequestsRepository) FindByIDAndToID(ctx context.Context, requestID int, toID int) (domains.FriendRequest, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		SELECT * FROM chat.friendrequests
 		WHERE id = $1 AND to_id = $2;
@@ -139,6 +154,7 @@ func (r *FriendRequestsRepository) FindByIDAndToID(requestID int, toID int) (dom
 
 	var request domains.FriendRequest
 	if err := r.store.QueryRow(
+		ctx,
 		query,
 		requestID,
 		toID,
@@ -148,7 +164,7 @@ func (r *FriendRequestsRepository) FindByIDAndToID(requestID int, toID int) (dom
 		&request.ToUser.ID,
 		&request.CreatedAt,
 	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return domains.FriendRequest{}, core_errors.ErrNotFound
 		}
 
@@ -158,7 +174,10 @@ func (r *FriendRequestsRepository) FindByIDAndToID(requestID int, toID int) (dom
 	return request, nil
 }
 
-func (r *FriendRequestsRepository) FindByFromID(fromID int) ([]domains.FriendRequest, error) {
+func (r *FriendRequestsRepository) FindByFromID(ctx context.Context, fromID int) ([]domains.FriendRequest, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		SELECT r.id, r.from_id, ur.username, r.to_id, ut.username, r.created_at
 		FROM chat.friendrequests AS r
@@ -166,7 +185,7 @@ func (r *FriendRequestsRepository) FindByFromID(fromID int) ([]domains.FriendReq
 		JOIN chat.users AS ut ON r.to_id = ut.id
 		WHERE r.from_id = $1;
 	`
-	rows, err := r.store.Query(query, fromID)
+	rows, err := r.store.Query(ctx, query, fromID)
 	if err != nil {
 		return []domains.FriendRequest{}, err
 	}
@@ -191,21 +210,21 @@ func (r *FriendRequestsRepository) FindByFromID(fromID int) ([]domains.FriendReq
 	return friendRequests, nil
 }
 
-func (r *FriendRequestsRepository) Delete(userID int, requestID int) error {
+func (r *FriendRequestsRepository) Delete(ctx context.Context, userID int, requestID int) error {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
 	query := `
 		DELETE FROM chat.friendrequests
 		WHERE id = $1 AND to_id = $2
 	`
 
-	result, err := r.store.Exec(query, requestID, userID)
+	result, err := r.store.Exec(ctx, query, requestID, userID)
 	if err != nil {
 		return err
 	}
 
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
+	rows := result.RowsAffected()
 
 	if rows != 1 {
 		return fmt.Errorf("friend request doesn't exist: %w", core_errors.ErrNotFound)

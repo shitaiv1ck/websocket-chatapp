@@ -1,6 +1,7 @@
 package users_service
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
@@ -13,10 +14,10 @@ type UsersService struct {
 }
 
 type UsersRepository interface {
-	Save(user domains.User) (domains.User, error)
-	FindAll(limit *int, offset *int) ([]domains.User, error)
-	FindByID(id int) (domains.User, error)
-	Update(user domains.User) (domains.User, error)
+	Save(ctx context.Context, user domains.User) (domains.User, error)
+	FindAll(ctx context.Context, limit *int, offset *int) ([]domains.User, error)
+	FindByID(ctx context.Context, id int) (domains.User, error)
+	Update(ctx context.Context, user domains.User) (domains.User, error)
 }
 
 type UsersWSTransport interface {
@@ -30,7 +31,7 @@ func NewService(rep UsersRepository, broadcaster UsersWSTransport) *UsersService
 	}
 }
 
-func (s *UsersService) CreateUser(user domains.User) (domains.User, error) {
+func (s *UsersService) CreateUser(ctx context.Context, user domains.User) (domains.User, error) {
 	if err := user.Validate(); err != nil {
 		return domains.User{}, fmt.Errorf("filed to validate user: %w", err)
 	}
@@ -39,7 +40,7 @@ func (s *UsersService) CreateUser(user domains.User) (domains.User, error) {
 		return domains.User{}, fmt.Errorf("failed to generate password hash: %w", err)
 	}
 
-	createdUser, err := s.rep.Save(user)
+	createdUser, err := s.rep.Save(ctx, user)
 	if err != nil {
 		return domains.User{}, fmt.Errorf("failed to create user: %w", err)
 	}
@@ -49,7 +50,7 @@ func (s *UsersService) CreateUser(user domains.User) (domains.User, error) {
 	return createdUser, nil
 }
 
-func (s *UsersService) GetUsers(limit *int, offset *int) ([]domains.User, error) {
+func (s *UsersService) GetUsers(ctx context.Context, limit *int, offset *int) ([]domains.User, error) {
 	if limit != nil && *limit < 0 {
 		return []domains.User{}, fmt.Errorf("limit must be non negative: %w", core_errors.ErrInvalidArg)
 	}
@@ -58,7 +59,7 @@ func (s *UsersService) GetUsers(limit *int, offset *int) ([]domains.User, error)
 		return []domains.User{}, fmt.Errorf("offset must be non negative: %w", core_errors.ErrInvalidArg)
 	}
 
-	users, err := s.rep.FindAll(limit, offset)
+	users, err := s.rep.FindAll(ctx, limit, offset)
 	if err != nil {
 		return []domains.User{}, fmt.Errorf("failed to get users from repository: %w", err)
 	}
@@ -66,8 +67,8 @@ func (s *UsersService) GetUsers(limit *int, offset *int) ([]domains.User, error)
 	return users, err
 }
 
-func (s *UsersService) GetUser(userID int) (domains.User, error) {
-	user, err := s.rep.FindByID(userID)
+func (s *UsersService) GetUser(ctx context.Context, userID int) (domains.User, error) {
+	user, err := s.rep.FindByID(ctx, userID)
 	if err != nil {
 		return domains.User{}, fmt.Errorf("failed to get user from repository: %w", err)
 	}
@@ -75,8 +76,8 @@ func (s *UsersService) GetUser(userID int) (domains.User, error) {
 	return user, nil
 }
 
-func (s *UsersService) PatchUser(userID int, patch domains.UserPatch) (domains.User, error) {
-	user, err := s.rep.FindByID(userID)
+func (s *UsersService) PatchUser(ctx context.Context, userID int, patch domains.UserPatch) (domains.User, error) {
+	user, err := s.rep.FindByID(ctx, userID)
 	if err != nil {
 		return domains.User{}, fmt.Errorf("failed to get user from repository: %w", err)
 	}
@@ -95,7 +96,7 @@ func (s *UsersService) PatchUser(userID int, patch domains.UserPatch) (domains.U
 		return domains.User{}, fmt.Errorf("failed to apply patch: %w", err)
 	}
 
-	patchedUser, err := s.rep.Update(user)
+	patchedUser, err := s.rep.Update(ctx, user)
 	if err != nil {
 		return domains.User{}, fmt.Errorf("failed to patch user: %w", err)
 	}

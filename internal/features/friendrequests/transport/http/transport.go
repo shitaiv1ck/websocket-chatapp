@@ -1,6 +1,7 @@
 package friendrequests_http_transport
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
@@ -16,9 +17,9 @@ type FriendRequestsHTTPTransport struct {
 }
 
 type FriendRequestsService interface {
-	CreateFriendRequest(request domains.FriendRequest) (domains.FriendRequest, error)
-	GetFriendRequests(userID int, direction *string) ([]domains.FriendRequest, error)
-	DeleteFriendRequest(userID int, requestID int) error
+	CreateFriendRequest(ctx context.Context, request domains.FriendRequest) (domains.FriendRequest, error)
+	GetFriendRequests(ctx context.Context, userID int, direction *string) ([]domains.FriendRequest, error)
+	DeleteFriendRequest(ctx context.Context, userID int, requestID int) error
 }
 
 func NewTransport(service FriendRequestsService) *FriendRequestsHTTPTransport {
@@ -55,7 +56,7 @@ func (t *FriendRequestsHTTPTransport) CreateFriendRequestHandler() http.HandlerF
 			ToUser:   domains.User{ID: request.ToUserID},
 		}
 
-		createdFriendRequest, err := t.service.CreateFriendRequest(friendRequest)
+		createdFriendRequest, err := t.service.CreateFriendRequest(r.Context(), friendRequest)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to create friend request")
 
@@ -97,7 +98,7 @@ func (t *FriendRequestsHTTPTransport) GetFriendRequestsHandler() http.HandlerFun
 
 		direction := core_request.GetStringQueryParam(r, "direction")
 
-		friendRequests, err := t.service.GetFriendRequests(userID, direction)
+		friendRequests, err := t.service.GetFriendRequests(r.Context(), userID, direction)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to get friend requests")
 
@@ -131,7 +132,7 @@ func (t *FriendRequestsHTTPTransport) DeleteFriendRequestHandler() http.HandlerF
 			return
 		}
 
-		if err := t.service.DeleteFriendRequest(userID, *friendRequestID); err != nil {
+		if err := t.service.DeleteFriendRequest(r.Context(), userID, *friendRequestID); err != nil {
 			responseHandler.ErrorResponse(err, "failed to delete friend request")
 
 			return

@@ -1,13 +1,18 @@
 package core_postgres
 
-import "github.com/kelseyhightower/envconfig"
+import (
+	"time"
+
+	"github.com/kelseyhightower/envconfig"
+)
 
 type Config struct {
-	User     string `envconfig:"USER" required:"true"`
-	Password string `envconfig:"PASSWORD" required:"true"`
-	Host     string `envconfig:"HOST" required:"true"`
-	Port     string `envconfig:"PORT" required:"true"`
-	DB       string `envconfig:"DB" required:"true"`
+	User     string        `envconfig:"USER" required:"true"`
+	Password string        `envconfig:"PASSWORD" required:"true"`
+	Host     string        `envconfig:"HOST" required:"true"`
+	Port     string        `envconfig:"PORT" required:"true"`
+	DB       string        `envconfig:"DB" required:"true"`
+	Timeout  time.Duration `envconfig:"TIMEOUT" required:"true"`
 }
 
 func NewConfig() (Config, error) {

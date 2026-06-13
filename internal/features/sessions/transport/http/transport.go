@@ -1,6 +1,7 @@
 package sessions_http_transport
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
@@ -15,9 +16,8 @@ type SessionsHTTPTransport struct {
 }
 
 type SessionsService interface {
-	CreateSession(userID int) (domains.Session, error)
-	Authentication(user domains.User) (int, error)
-	DeleteSession(token string) error
+	CreateSession(ctx context.Context, user domains.User) (domains.Session, error)
+	DeleteSession(ctx context.Context, token string) error
 }
 
 func NewHTTPTransport(service SessionsService) *SessionsHTTPTransport {
@@ -47,14 +47,7 @@ func (s *SessionsHTTPTransport) CreateSessionHandler() http.HandlerFunc {
 			Password: request.Password,
 		}
 
-		userID, err := s.service.Authentication(user)
-		if err != nil {
-			responseHandler.ErrorResponse(err, "failed to authenticate")
-
-			return
-		}
-
-		session, err := s.service.CreateSession(userID)
+		session, err := s.service.CreateSession(r.Context(), user)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to create session")
 
@@ -97,7 +90,7 @@ func (s *SessionsHTTPTransport) DeleteSessionHandler() http.HandlerFunc {
 			return
 		}
 
-		if err := s.service.DeleteSession(sessionToken.Value); err != nil {
+		if err := s.service.DeleteSession(r.Context(), sessionToken.Value); err != nil {
 			responseHandler.ErrorResponse(err, "failed to delete session")
 
 			return
