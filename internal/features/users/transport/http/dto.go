@@ -1,26 +1,18 @@
 package users_http_transport
 
-import "github.com/shitaiv1ck/realtime-chat/internal/core/domains"
+import (
+	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
+)
 
-type CreateUserRequest struct {
+type UserDTORequest struct {
 	Username string `json:"username" validate:"required,min=3,max=100"`
 	Password string `json:"password" validate:"required,min=8,max=100"`
 }
 
-type CreateUserResponse struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-}
-
-type GetUserResponse struct {
+type UserDTOResponse struct {
 	ID       int    `json:"id"`
 	Username string `json:"username"`
 	IsOnline bool   `json:"is_online"`
-}
-
-type GetMeResponse struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
 }
 
 type PatchUserRequest struct {
@@ -29,22 +21,15 @@ type PatchUserRequest struct {
 	NewPassword domains.Nullable[string] `json:"new_password"`
 }
 
-type PatchUserResponse struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-}
+func ToDTOResponse(users []domains.User) []UserDTOResponse {
+	response := make([]UserDTOResponse, len(users))
 
-func usersToResponse(users []domains.User) []GetUserResponse {
-	response := make([]GetUserResponse, 0)
-
-	for _, user := range users {
-		userToResponse := GetUserResponse{
+	for i, user := range users {
+		response[i] = UserDTOResponse{
 			ID:       user.ID,
 			Username: user.Username,
 			IsOnline: user.IsOnline,
 		}
-
-		response = append(response, userToResponse)
 	}
 
 	return response

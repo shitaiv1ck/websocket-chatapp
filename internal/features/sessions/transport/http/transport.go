@@ -27,6 +27,8 @@ func NewHTTPTransport(service SessionsService) *SessionsHTTPTransport {
 }
 
 func (s *SessionsHTTPTransport) CreateSessionHandler() http.HandlerFunc {
+	type CreateSessionRequest UserDTORequest
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		log := core_logger.FromContext(r.Context())
 		responseHandler := core_repsponse.NewResponseWriter(w)
@@ -63,7 +65,7 @@ func (s *SessionsHTTPTransport) CreateSessionHandler() http.HandlerFunc {
 			Name:     "session_token",
 			Value:    session.SessionToken,
 			Path:     "/",
-			Expires:  session.ExpiresAt,
+			Expires:  session.ExpiredAt,
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
 		})
@@ -72,7 +74,7 @@ func (s *SessionsHTTPTransport) CreateSessionHandler() http.HandlerFunc {
 			Name:     "csrf_token",
 			Value:    session.CSRFToken,
 			Path:     "/",
-			Expires:  session.ExpiresAt,
+			Expires:  session.ExpiredAt,
 			HttpOnly: false,
 			SameSite: http.SameSiteLaxMode,
 		})

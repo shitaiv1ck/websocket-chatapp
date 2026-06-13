@@ -28,13 +28,13 @@ func (r *SessionsRepository) Save(session domains.Session) (domains.Session, err
 		&session.SessionToken,
 		&session.CSRFToken,
 		&session.UserID,
-		&session.ExpiresAt,
+		&session.ExpiredAt,
 	).Scan(
 		&createdSession.SessionToken,
 		&createdSession.CSRFToken,
 		&createdSession.UserID,
 		&createdSession.CreatedAt,
-		&createdSession.ExpiresAt,
+		&createdSession.ExpiredAt,
 	); err != nil {
 		return domains.Session{}, err
 	}
@@ -57,7 +57,7 @@ func (r *SessionsRepository) FindByToken(token string) (domains.Session, error) 
 		&session.CSRFToken,
 		&session.UserID,
 		&session.CreatedAt,
-		&session.ExpiresAt,
+		&session.ExpiredAt,
 	); err != nil {
 		return domains.Session{}, err
 	}

@@ -1,6 +1,7 @@
 package friendrequests_service
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/shitaiv1ck/realtime-chat/internal/core/domains"
@@ -9,7 +10,7 @@ import (
 
 type FriendRequestsService struct {
 	friendRequestsRep FriendRequestsRepository
-	usersRep          UsersRepository
+	friendshipRep     FriendshipRepository
 	broadcaster       FriendRequestsWSTransport
 }
 
@@ -21,8 +22,8 @@ type FriendRequestsRepository interface {
 	Delete(userID int, requestID int) error
 }
 
-type UsersRepository interface {
-	FindByID(id int) (domains.User, error)
+type FriendshipRepository interface {
+	FindByUsers(firstUserID int, secondUserID int) (domains.Friendship, error)
 }
 
 type FriendRequestsWSTransport interface {
@@ -30,52 +31,76 @@ type FriendRequestsWSTransport interface {
 	NotifyDeclinedRequest(userID int, requestID int)
 }
 
-func NewService(friendRequestsRep FriendRequestsRepository, usersRep UsersRepository, broadcaster FriendRequestsWSTransport) *FriendRequestsService {
+func NewService(
+	friendRequestsRep FriendRequestsRepository,
+	friendshipRep FriendshipRepository,
+	broadcaster FriendRequestsWSTransport,
+) *FriendRequestsService {
 	return &FriendRequestsService{
 		friendRequestsRep: friendRequestsRep,
-		usersRep:          usersRep,
+		friendshipRep:     friendshipRep,
 		broadcaster:       broadcaster,
 	}
 }
 
 func (s *FriendRequestsService) CreateFriendRequest(request domains.FriendRequest) (domains.FriendRequest, error) {
-	if request.FromUser.ID <= 0 || request.ToUser.ID <= 0 {
-		return domains.FriendRequest{}, fmt.Errorf("user id must be positive: %w", core_errors.ErrInvalidArg)
+	if err := request.Validate(); err != nil {
+		return domains.FriendRequest{}, fmt.Errorf("failed to validate friend request: %w", err)
 	}
 
-	if request.FromUser.ID == request.ToUser.ID {
-		return domains.FriendRequest{}, fmt.Errorf("can't send friend request to yourself: %w", core_errors.ErrInvalidArg)
-	}
-
-	fromUser, err := s.usersRep.FindByID(request.FromUser.ID)
+	hasIncoming, err := s.hasIncomingFromTargetUser(request.ToUser.ID, request.FromUser.ID)
 	if err != nil {
-		return domains.FriendRequest{}, fmt.Errorf("failed to get user with id=%v: %w", request.FromUser.ID, err)
-	}
-	toUser, err := s.usersRep.FindByID(request.ToUser.ID)
-	if err != nil {
-		return domains.FriendRequest{}, fmt.Errorf("failed to get user with id=%v: %w", request.ToUser.ID, err)
+		return domains.FriendRequest{}, fmt.Errorf("failed to get friend request: %w", err)
 	}
 
-	if s.hasIncomingFromTargetUser(request) {
+	if hasIncoming {
 		return domains.FriendRequest{}, fmt.Errorf("user with id=%v already sent friend request: %w", request.ToUser.ID, core_errors.ErrConflict)
+	}
+
+	areFriends, err := s.areFriends(request.FromUser.ID, request.ToUser.ID)
+	if err != nil {
+		return domains.FriendRequest{}, fmt.Errorf("failed to get friendship: %w", err)
+	}
+
+	if areFriends {
+		return domains.FriendRequest{}, fmt.Errorf("user with id=%v already your friend: %w", request.ToUser.ID, core_errors.ErrConflict)
 	}
 
 	createdFriendRequest, err := s.friendRequestsRep.Save(request)
 	if err != nil {
 		return domains.FriendRequest{}, err
 	}
-	createdFriendRequest.FromUser.Username = fromUser.Username
-	createdFriendRequest.ToUser.Username = toUser.Username
 
-	s.broadcaster.NotifyClientEvent(request.ToUser.ID, "send_friend_request", createdFriendRequest)
+	s.broadcaster.NotifyClientEvent(request.ToUser.ID, "received_friend_request", createdFriendRequest)
+	s.broadcaster.NotifyClientEvent(request.FromUser.ID, "sent_friend_request", createdFriendRequest)
 
 	return createdFriendRequest, nil
 }
 
-func (s *FriendRequestsService) hasIncomingFromTargetUser(request domains.FriendRequest) bool {
-	_, err := s.friendRequestsRep.FindByFromIDAndToID(request.ToUser.ID, request.FromUser.ID)
+func (s *FriendRequestsService) hasIncomingFromTargetUser(toUserID int, fromUserID int) (bool, error) {
+	_, err := s.friendRequestsRep.FindByFromIDAndToID(toUserID, fromUserID)
+	if err != nil {
+		if errors.Is(err, core_errors.ErrNotFound) {
+			return false, nil
+		}
 
-	return err == nil
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (s *FriendRequestsService) areFriends(firstUserID int, secondUserID int) (bool, error) {
+	_, err := s.friendshipRep.FindByUsers(firstUserID, secondUserID)
+	if err != nil {
+		if errors.Is(err, core_errors.ErrNotFound) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (s *FriendRequestsService) GetFriendRequests(userID int, direction *string) ([]domains.FriendRequest, error) {

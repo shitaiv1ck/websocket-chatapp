@@ -103,7 +103,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	userID, err := core_utils.GetIntFromContext(req.Context(), "user_id")
 	if err != nil {
-		responseHandler.ErrorResponse(core_errors.ErrCoockie, "failed to authentication")
+		responseHandler.ErrorResponse(core_errors.ErrCoockie, "failed to authenticate")
 
 		return
 	}
@@ -114,7 +114,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	client := NewClient(*userID, socket, s)
+	client := NewClient(userID, socket, s)
 
 	s.join <- client
 

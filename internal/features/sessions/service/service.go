@@ -64,7 +64,11 @@ func (s *SessionsService) CreateSession(userID int) (domains.Session, error) {
 		SessionToken: sessionToken,
 		CSRFToken:    csrfToken,
 		UserID:       userID,
-		ExpiresAt:    time.Now().Add(24 * time.Hour),
+		ExpiredAt:    time.Now().Add(24 * time.Hour),
+	}
+
+	if err := session.Validate(); err != nil {
+		return domains.Session{}, fmt.Errorf("failed to validate session: %w", err)
 	}
 
 	createdSession, err := s.sessionsRep.Save(session)
@@ -81,8 +85,8 @@ func (s *SessionsService) GetSession(sessionToken string) (domains.Session, erro
 		return domains.Session{}, fmt.Errorf("failed to get session: %w", err)
 	}
 
-	if !session.ExpiresAt.After(time.Now()) {
-		return domains.Session{}, fmt.Errorf("expired cookie: %w", core_errors.ErrCoockie)
+	if err := session.Validate(); err != nil {
+		return domains.Session{}, fmt.Errorf("failed to validate session: %w", err)
 	}
 
 	return session, nil
