@@ -232,3 +232,26 @@ func (r *FriendRequestsRepository) Delete(ctx context.Context, userID int, reque
 
 	return nil
 }
+
+func (r *FriendRequestsRepository) DeleteTx(ctx context.Context, tx core_postgres.SQLExecuter, userID int, requestID int) error {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
+	query := `
+		DELETE FROM chat.friendrequests
+		WHERE id = $1 AND to_id = $2
+	`
+
+	result, err := tx.Exec(ctx, query, requestID, userID)
+	if err != nil {
+		return err
+	}
+
+	rows := result.RowsAffected()
+
+	if rows != 1 {
+		return fmt.Errorf("friend request doesn't exist: %w", core_errors.ErrNotFound)
+	}
+
+	return nil
+}

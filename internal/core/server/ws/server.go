@@ -13,6 +13,12 @@ import (
 	"go.uber.org/zap"
 )
 
+type Broadcaster interface {
+	Broadcast(msg []byte)
+	NotifyClient(id int, msg []byte)
+	GetLogger() *core_logger.Logger
+}
+
 type Server struct {
 	clients  map[int]*Client
 	join     chan *Client
