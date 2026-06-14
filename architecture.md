@@ -15,6 +15,7 @@ chat
 ├─ internal
 │  ├─ core
 │  │  ├─ domains
+│  │  │  ├─ chat.go
 │  │  │  ├─ friendrequest.go
 │  │  │  ├─ friendships.go
 │  │  │  ├─ nullable.go
@@ -52,6 +53,18 @@ chat
 │  │  └─ utils
 │  │     └─ context.go
 │  └─ features
+│     ├─ chats
+│     │  ├─ repository
+│     │  │  └─ repository.go
+│     │  ├─ service
+│     │  │  └─ service.go
+│     │  └─ transport
+│     │     ├─ http
+│     │     │  ├─ dto.go
+│     │     │  └─ transport.go
+│     │     └─ ws
+│     │        ├─ dto.go
+│     │        └─ transport.go
 │     ├─ friendrequests
 │     │  ├─ respository
 │     │  │  └─ repository.go
@@ -113,7 +126,7 @@ chat
 | **sessions**       | `session_token` (VARCHAR(255)) | Сессия пользователя (хранит файлы cookie + ID пользователя) |
 | **friendships**    | `id` (GENERATED)               | Друзья (хранит информацию о дружественных связях между пользователями) |
 | **friendrequests** | `id` (GENERATED)               | Заявки в друзья (хранит информацию о том, кто и кому отправил звявку в друзья) |
-| **chats**          | `id` (VARCHAR(100))            | Чаты (хранит информацию о чатах) |
+| **chats**          | `id` (GENERATED)               | Чаты (хранит информацию о чатах) |
 | **messages**       | `id` (GENERATED)               | Сообщения (хранит информацию об отправленных сообщениях) |
 
 ## Диаграмма
@@ -124,7 +137,7 @@ chat
 
 ### Денормализация в таблице `messages`
 
-В таблице `messages` существует поле `receiver_id`, несмотря на то, что мы можем найти получателя через таблицу `chats` с помощью операции **JOIN** (поскольку `chats` хранит `user1_id` и `user2_id`). Решение добавить данное поле было принято для **оптимизации под чтение**.
+В таблице `messages` существует поле `receiver_id`, несмотря на то, что мы можем найти получателя через таблицу `chats` с помощью операции **JOIN** (поскольку `chats` хранит `user1_id` и `user2_id`). Решение добавить данное поле было принято для **оптимизации под чтение**
 
 ### Денормализация в таблице `chats`
 
