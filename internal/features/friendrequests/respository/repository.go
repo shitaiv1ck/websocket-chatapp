@@ -210,48 +210,33 @@ func (r *FriendRequestsRepository) FindByFromID(ctx context.Context, fromID int)
 	return friendRequests, nil
 }
 
-func (r *FriendRequestsRepository) Delete(ctx context.Context, userID int, requestID int) error {
+func (r *FriendRequestsRepository) Delete(ctx context.Context, userID int, requestID int) (domains.FriendRequest, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
 	defer cancel()
 
 	query := `
 		DELETE FROM chat.friendrequests
 		WHERE id = $1 AND to_id = $2
+		RETURNING id, from_id, to_id;
 	`
 
-	result, err := r.store.Exec(ctx, query, requestID, userID)
-	if err != nil {
-		return err
+	var deletedRequest domains.FriendRequest
+	if err := r.store.QueryRow(
+		ctx,
+		query,
+		requestID,
+		userID,
+	).Scan(
+		&deletedRequest.ID,
+		&deletedRequest.FromUser.ID,
+		&deletedRequest.ToUser.ID,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domains.FriendRequest{}, fmt.Errorf("friend request doesn't exist: %w", core_errors.ErrNotFound)
+		}
+
+		return domains.FriendRequest{}, err
 	}
 
-	rows := result.RowsAffected()
-
-	if rows != 1 {
-		return fmt.Errorf("friend request doesn't exist: %w", core_errors.ErrNotFound)
-	}
-
-	return nil
-}
-
-func (r *FriendRequestsRepository) DeleteTx(ctx context.Context, tx core_postgres.SQLExecuter, userID int, requestID int) error {
-	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
-	defer cancel()
-
-	query := `
-		DELETE FROM chat.friendrequests
-		WHERE id = $1 AND to_id = $2
-	`
-
-	result, err := tx.Exec(ctx, query, requestID, userID)
-	if err != nil {
-		return err
-	}
-
-	rows := result.RowsAffected()
-
-	if rows != 1 {
-		return fmt.Errorf("friend request doesn't exist: %w", core_errors.ErrNotFound)
-	}
-
-	return nil
+	return deletedRequest, nil
 }

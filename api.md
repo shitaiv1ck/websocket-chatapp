@@ -18,7 +18,14 @@
 | `DELETE` /api/protected/friend-requests/{friend_request_id} | Отклоняет заявку в друзья |
 | `POST` /api/protected/friendships | Принимает заявку в друзья |
 | `GET` /api/protected/friendships?limit=&offset= | Возвращает список друзей с заданными параметрами `limit` и `offset` (если не заданы, то возвращает всех друзей)|
-| `DELETE` /api/protected/friendships/{friendships_id} | Удаляет друга |
+| `DELETE` /api/protected/friendships/{friendship_id} | Удаляет друга |
+| `POST` /api/protected/chats | Создает или возвращает чат с другом |
+| `GET` /api/protected/chats?limit=&offset= | Возващает список чатов с заданными параметрами `limit` и `offset` (если не заданы, то возвращает все чаты) |
+| `DELETE` /api/protected/chats/{chat_id} | Удаляет чат |
+
+### Примечание 
+
+Решение сделать паттерн `POST /api/protected/chats` идемпотентным было принято, чтобы избежать конфликта, когда пользователь А и пользователь Б одновременно захотели начать новый чат друг с другом
 
 ### CSRF Protection
 
@@ -41,15 +48,15 @@
 
 ## Коды ответов
 
-| Код | Описание | В каких эндпоинтах |
-|-----|----------|---------------------|
-| 200 | Успешный GET | `GET /api/users`, `GET /api/protected/users/me`, `GET /api/protected/friend-requests`, `GET /api/protected/friendships` |
+| Код | Описание | Эндпоинты |
+|-----|----------|-----------|
+| 200 | Успешный GET / POST (идемпотентный) | `GET /api/users`, `GET /api/protected/users/me`, `GET /api/protected/friend-requests`, `GET /api/protected/friendships`, `GET /api/protected/chats`, `POST /api/protected/chats` (чат уже существовал) |
 | 201 | Успешное создание | `POST /api/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `POST /api/protected/friendships` |
-| 204 | Успешное удаление | `DELETE /api/protected/sessions`, `DELETE /api/protected/friend-requests/{friend_request_id}`, `DELETE /api/protected/friendships/{friendship_id}` |
-| 400 | Ошибка валидации | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `POST /api/protected/friendships` |
+| 204 | Успешное удаление | `DELETE /api/protected/sessions`, `DELETE /api/protected/friend-requests/{id}`, `DELETE /api/protected/friendships/{id}`, `DELETE /api/protected/chats/{id}` |
+| 400 | Ошибка валидации | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `POST /api/protected/friendships`, `POST /api/protected/chats` (попытка создать чат с собой), `DELETE /api/protected/chats/{id}` (неверный формат ID) |
 | 401 | Не авторизован | Все `/api/protected/*`, `POST /api/sessions` |
-| 404 | Ресурс не найден | `POST /api/protected/friend-requests` (если `to_user_id` не существует), `DELETE /api/protected/friend-requests/{friend_request_id}` (если заявка не найдена), `POST /api/protected/friendships` (если `friend_request_id` не найден), `DELETE /api/protected/friendships/{friendship_id}` (если дружба не найдена) |
-| 409 | Конфликт (уже существует) | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/protected/friend-requests` (заявка уже отправлена или дружба уже существует) |
+| 404 | Ресурс не найден | `POST /api/protected/friend-requests` (пользователь не существует), `DELETE /api/protected/friend-requests/{id}` (заявка не найдена), `POST /api/protected/friendships` (запрос не найден), `DELETE /api/protected/friendships/{id}` (дружба не найдена), `POST /api/protected/chats` (друг не найден), `DELETE /api/protected/chats/{id}` (чат не найден) |
+| 409 | Конфликт (уже существует) | `POST /api/users` (username занят), `PATCH /api/protected/users` (username занят), `POST /api/protected/friend-requests` (заявка уже отправлена или уже друзья) |
 | 500 | Внутренняя ошибка сервера | Любой |
 
 ## Примеры JSON в теле запроса/ответа
@@ -469,7 +476,7 @@ Response body:
     },
     "second_user": {
         "id": 5,
-        "username": "n1x",
+        "username": "shitai",
         "is_online": false
     }
 }
@@ -575,6 +582,159 @@ Response body:
 {
     "error": "failed to delete friendship: friendship doesn't exist: not found",
     "message": "failed to delete friendship"
+}
+```
+```JSON
+401 Unauthorized
+
+{
+    "error": "invalid cookie",
+    "message": "check cookie"
+}
+```
+```JSON
+500 Internal Server Error
+
+{
+    "error": "some error",
+    "message": "some message"
+}
+```
+
+**`POST` /api/protected/chats**
+
+Request body:
+```JSON
+{
+    "friend_id": 3
+}
+```
+
+Response body:
+```JSON
+200 OK
+
+{
+    "id": 7,
+    "first_user": {
+        "id": 2,
+        "username": "n1x",
+        "is_online": false
+    },
+    "second_user": {
+        "id": 3,
+        "username": "Марк Аврелий",
+        "is_online": false
+    },
+    "last_message_content": null,
+    "last_message_at": "2026-06-14T15:37:57.62259+03:00"
+}
+```
+```JSON
+400 Bad Request
+
+{
+    "error": "can't create chat with yourself: invalid argument",
+    "message": "failed to create or get chat"
+}
+```
+```JSON
+401 Unauthorized
+
+{
+    "error": "invalid cookie",
+    "message": "check cookie"
+}
+```
+```JSON
+500 Internal Server Error
+
+{
+    "error": "some error",
+    "message": "some message"
+}
+```
+
+**`GET` /api/protected/chats**
+
+Request body:
+```JSON
+(no body)
+```
+
+Response body:
+```JSON
+200 OK
+
+[
+    {
+        "id": 7,
+        "first_user": {
+            "id": 2,
+            "username": "n1x",
+            "is_online": false
+        },
+        "second_user": {
+            "id": 3,
+            "username": "Марк Аврелий",
+            "is_online": false
+        },
+        "last_message_content": null,
+        "last_message_at": "2026-06-14T15:37:57.62259+03:00"
+    },
+    {
+        "id": 4,
+        "first_user": {
+            "id": 1,
+            "username": "KeynySiro",
+            "is_online": false
+        },
+        "second_user": {
+            "id": 2,
+            "username": "n1x",
+            "is_online": false
+        },
+        "last_message_content": null,
+        "last_message_at": "2026-06-14T15:37:47.239136+03:00"
+    }
+]
+```
+```JSON
+401 Unauthorized
+
+{
+    "error": "invalid cookie",
+    "message": "check cookie"
+}
+```
+```JSON
+500 Internal Server Error
+
+{
+    "error": "some error",
+    "message": "some message"
+}
+```
+
+**`DELETE` /api/protected/chats/{chat_id}**
+
+Request body:
+```JSON
+(no body)
+```
+
+Response body:
+```JSON
+204 No Content
+
+(no body)
+```
+```JSON
+404 Not Found
+
+{
+    "error": "failed to delete chat: chat doesn't exist: not found",
+    "message": "failed to delete chat"
 }
 ```
 ```JSON

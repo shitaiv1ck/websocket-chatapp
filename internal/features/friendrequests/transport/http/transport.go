@@ -132,7 +132,7 @@ func (t *FriendRequestsHTTPTransport) DeleteFriendRequestHandler() http.HandlerF
 			return
 		}
 
-		if err := t.service.DeleteFriendRequest(r.Context(), userID, *friendRequestID); err != nil {
+		if err := t.service.DeleteFriendRequest(r.Context(), userID, friendRequestID); err != nil {
 			responseHandler.ErrorResponse(err, "failed to delete friend request")
 
 			return

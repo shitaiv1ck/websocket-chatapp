@@ -65,7 +65,7 @@ func (t *FriendshipsHTTPTransport) CreateFriendshipHandler() http.HandlerFunc {
 			},
 			SecondUser: UserDTOResponse{
 				ID:       createdFriendship.SecondUser.ID,
-				Username: createdFriendship.FirstUser.Username,
+				Username: createdFriendship.SecondUser.Username,
 				IsOnline: createdFriendship.SecondUser.IsOnline,
 			},
 		}
@@ -136,7 +136,7 @@ func (t *FriendshipsHTTPTransport) DeleteFriendshipHandler() http.HandlerFunc {
 			return
 		}
 
-		if err := t.service.DeleteFriendship(r.Context(), userID, *friendshipID); err != nil {
+		if err := t.service.DeleteFriendship(r.Context(), userID, friendshipID); err != nil {
 			responseHandler.ErrorResponse(err, "failed to delete friendship")
 
 			return

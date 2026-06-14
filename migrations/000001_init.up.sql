@@ -41,7 +41,7 @@ CREATE INDEX idx_friendrequests_from_id ON chat.friendrequests(from_id);
 CREATE INDEX idx_friendrequests_to_id ON chat.friendrequests(to_id);
 
 CREATE TABLE chat.chats(
-    id VARCHAR(100) NOT NULL PRIMARY KEY,
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user1_id INT NOT NULL REFERENCES chat.users(id) ON DELETE CASCADE,
     user2_id INT NOT NULL REFERENCES chat.users(id) ON DELETE CASCADE,
     last_message_content TEXT,
@@ -50,12 +50,12 @@ CREATE TABLE chat.chats(
     CHECK(user1_id < user2_id),
     UNIQUE(user1_id, user2_id)
 );
-CREATE INDEX idx_chats_user1_id ON chat.chats(user1_id);
-CREATE INDEX idx_chats_user2_id ON chat.chats(user2_id);
+CREATE INDEX idx_chats_user1_id ON chat.chats(user1_id, last_message_at DESC);
+CREATE INDEX idx_chats_user2_id ON chat.chats(user2_id, last_message_at DESC);
 
 CREATE TABLE chat.messages(
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    chat_id VARCHAR(100) NOT NULL REFERENCES chat.chats(id) ON DELETE CASCADE,
+    chat_id INT NOT NULL REFERENCES chat.chats(id) ON DELETE CASCADE,
     sender_id INT NOT NULL REFERENCES chat.users(id) ON DELETE CASCADE,
     receiver_id INT NOT NULL REFERENCES chat.users(id) ON DELETE CASCADE,
     content TEXT NOT NULL CHECK(char_length(content) > 0),

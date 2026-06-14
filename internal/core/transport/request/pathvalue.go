@@ -8,13 +8,13 @@ import (
 	core_errors "github.com/shitaiv1ck/realtime-chat/internal/core/errors"
 )
 
-func GetIntPathValue(r *http.Request, key string) (*int, error) {
+func GetIntPathValue(r *http.Request, key string) (int, error) {
 	value := r.PathValue(key)
 
 	num, err := strconv.Atoi(value)
 	if err != nil {
-		return nil, fmt.Errorf("%v: %w", err, core_errors.ErrInvalidArg)
+		return 0, fmt.Errorf("%v: %w", err, core_errors.ErrInvalidArg)
 	}
 
-	return &num, nil
+	return num, nil
 }

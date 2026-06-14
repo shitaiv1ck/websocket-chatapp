@@ -11,7 +11,7 @@ import (
 
 type FriendRequestsService struct {
 	friendRequestsRep FriendRequestsRepository
-	friendshipRep     FriendshipRepository
+	friendshipsRep    FriendshipRepository
 	broadcaster       FriendRequestsWSTransport
 }
 
@@ -20,7 +20,7 @@ type FriendRequestsRepository interface {
 	FindByFromIDAndToID(ctx context.Context, fromID int, toID int) (domains.FriendRequest, error)
 	FindByToID(ctx context.Context, toID int) ([]domains.FriendRequest, error)
 	FindByFromID(ctx context.Context, fromID int) ([]domains.FriendRequest, error)
-	Delete(ctx context.Context, userID int, requestID int) error
+	Delete(ctx context.Context, userID int, requestID int) (domains.FriendRequest, error)
 }
 
 type FriendshipRepository interface {
@@ -39,7 +39,7 @@ func NewService(
 ) *FriendRequestsService {
 	return &FriendRequestsService{
 		friendRequestsRep: friendRequestsRep,
-		friendshipRep:     friendshipRep,
+		friendshipsRep:    friendshipRep,
 		broadcaster:       broadcaster,
 	}
 }
@@ -92,7 +92,7 @@ func (s *FriendRequestsService) hasIncomingFromTargetUser(ctx context.Context, t
 }
 
 func (s *FriendRequestsService) areFriends(ctx context.Context, firstUserID int, secondUserID int) (bool, error) {
-	_, err := s.friendshipRep.FindByUsers(ctx, firstUserID, secondUserID)
+	_, err := s.friendshipsRep.FindByUsers(ctx, firstUserID, secondUserID)
 	if err != nil {
 		if errors.Is(err, core_errors.ErrNotFound) {
 			return false, nil
@@ -130,11 +130,17 @@ func (s *FriendRequestsService) GetFriendRequests(ctx context.Context, userID in
 }
 
 func (s *FriendRequestsService) DeleteFriendRequest(ctx context.Context, userID int, requestID int) error {
-	if err := s.friendRequestsRep.Delete(ctx, userID, requestID); err != nil {
+	if requestID <= 0 {
+		return fmt.Errorf("request id must be positive")
+	}
+
+	deletedRequest, err := s.friendRequestsRep.Delete(ctx, userID, requestID)
+	if err != nil {
 		return err
 	}
 
-	s.broadcaster.NotifyDeclinedRequest(userID, requestID)
+	s.broadcaster.NotifyDeclinedRequest(userID, deletedRequest.FromUser.ID)
+	s.broadcaster.NotifyDeclinedRequest(userID, deletedRequest.ToUser.ID)
 
 	return nil
 }

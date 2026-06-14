@@ -8,5 +8,5 @@ var (
 	ErrConflict       = errors.New("already exists")
 	ErrNotFound       = errors.New("not found")
 	ErrUnauthenticate = errors.New("invalid username or password")
-	ErrUnauthorize    = errors.New("invalid metadata")
+	ErrUnauthorize    = errors.New("invalid user id")
 )
