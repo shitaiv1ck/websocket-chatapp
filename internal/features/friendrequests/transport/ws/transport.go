@@ -51,7 +51,7 @@ func (t *FriendRequestsWSTransport) NotifyClientEvent(userID int, event string, 
 
 func (t *FriendRequestsWSTransport) NotifyDeclinedRequest(userID int, requestID int) {
 	message := WebSocketMessage{
-		Type:    "declined_friend_request",
+		Type:    "friend_request.declined",
 		Content: map[string]int{"request_id": requestID},
 	}
 

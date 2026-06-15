@@ -18,6 +18,7 @@ chat
 │  │  │  ├─ chat.go
 │  │  │  ├─ friendrequest.go
 │  │  │  ├─ friendships.go
+│  │  │  ├─ message.go
 │  │  │  ├─ nullable.go
 │  │  │  ├─ session.go
 │  │  │  └─ user.go
@@ -78,6 +79,18 @@ chat
 │     │        ├─ dto.go
 │     │        └─ transport.go
 │     ├─ friendships
+│     │  ├─ repository
+│     │  │  └─ repository.go
+│     │  ├─ service
+│     │  │  └─ service.go
+│     │  └─ transport
+│     │     ├─ http
+│     │     │  ├─ dto.go
+│     │     │  └─ transport.go
+│     │     └─ ws
+│     │        ├─ dto.go
+│     │        └─ transport.go
+│     ├─ messages
 │     │  ├─ repository
 │     │  │  └─ repository.go
 │     │  ├─ service

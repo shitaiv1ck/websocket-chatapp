@@ -45,7 +45,7 @@ func (s *UsersService) CreateUser(ctx context.Context, user domains.User) (domai
 		return domains.User{}, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	s.broadcaster.BroadcastEvent("new_user", createdUser)
+	s.broadcaster.BroadcastEvent("user.created", createdUser)
 
 	return createdUser, nil
 }
@@ -102,7 +102,7 @@ func (s *UsersService) PatchUser(ctx context.Context, userID int, patch domains.
 	}
 
 	if patch.Username.Set {
-		s.broadcaster.BroadcastEvent("changed_username", patchedUser)
+		s.broadcaster.BroadcastEvent("user.change_username", patchedUser)
 	}
 
 	return patchedUser, nil

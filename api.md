@@ -22,6 +22,9 @@
 | `POST` /api/protected/chats | Создает или возвращает чат с другом |
 | `GET` /api/protected/chats?limit=&offset= | Возващает список чатов с заданными параметрами `limit` и `offset` (если не заданы, то возвращает все чаты) |
 | `DELETE` /api/protected/chats/{chat_id} | Удаляет чат |
+| `POST` /api/protected/chats/{chat_id}/messages | Отправляет сообщение в чат |
+| `GET` /api/protected/chats/{chat_id}/messages | Возвращает отсортированный список всех сообщений в чате |
+
 
 ### Примечание 
 
@@ -50,12 +53,12 @@
 
 | Код | Описание | Эндпоинты |
 |-----|----------|-----------|
-| 200 | Успешный GET / POST (идемпотентный) | `GET /api/users`, `GET /api/protected/users/me`, `GET /api/protected/friend-requests`, `GET /api/protected/friendships`, `GET /api/protected/chats`, `POST /api/protected/chats` (чат уже существовал) |
-| 201 | Успешное создание | `POST /api/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `POST /api/protected/friendships` |
+| 200 | Успешный GET / POST (идемпотентный) | `GET /api/users`, `GET /api/protected/users/me`, `GET /api/protected/friend-requests`, `GET /api/protected/friendships`, `GET /api/protected/chats`, `GET /api/protected/chats/{chat_id}/messages`, `POST /api/protected/chats` (чат уже существовал) |
+| 201 | Успешное создание | `POST /api/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `POST /api/protected/friendships`, `POST /api/protected/chats/{chat_id}/messages` |
 | 204 | Успешное удаление | `DELETE /api/protected/sessions`, `DELETE /api/protected/friend-requests/{id}`, `DELETE /api/protected/friendships/{id}`, `DELETE /api/protected/chats/{id}` |
-| 400 | Ошибка валидации | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `POST /api/protected/friendships`, `POST /api/protected/chats` (попытка создать чат с собой), `DELETE /api/protected/chats/{id}` (неверный формат ID) |
+| 400 | Ошибка валидации | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `POST /api/protected/friendships`, `POST /api/protected/chats` (попытка создать чат с собой), `POST /api/protected/chats/{chat_id}/messages` (пользователь не друг), `DELETE /api/protected/chats/{id}` (неверный формат ID) |
 | 401 | Не авторизован | Все `/api/protected/*`, `POST /api/sessions` |
-| 404 | Ресурс не найден | `POST /api/protected/friend-requests` (пользователь не существует), `DELETE /api/protected/friend-requests/{id}` (заявка не найдена), `POST /api/protected/friendships` (запрос не найден), `DELETE /api/protected/friendships/{id}` (дружба не найдена), `POST /api/protected/chats` (друг не найден), `DELETE /api/protected/chats/{id}` (чат не найден) |
+| 404 | Ресурс не найден | `POST /api/protected/friend-requests` (пользователь не существует), `DELETE /api/protected/friend-requests/{id}` (заявка не найдена), `POST /api/protected/friendships` (запрос не найден), `DELETE /api/protected/friendships/{id}` (дружба не найдена), `POST /api/protected/chats` (друг не найден), `DELETE /api/protected/chats/{id}` (чат не найден), `POST /api/protected/chats/{chat_id}/messages` (чат не найден), `GET /api/protected/chats/{chat_id}/messages` (чат не найден) |
 | 409 | Конфликт (уже существует) | `POST /api/users` (username занят), `PATCH /api/protected/users` (username занят), `POST /api/protected/friend-requests` (заявка уже отправлена или уже друзья) |
 | 500 | Внутренняя ошибка сервера | Любой |
 
@@ -295,7 +298,7 @@ Response body:
 Request body:
 ```JSON
 {
-    "to_user_id": 6
+    "to_user_id": 6  #required
 }
 ```
 
@@ -459,7 +462,7 @@ Response body:
 Request body:
 ```JSON
 {
-    "friend_request_id": 8
+    "friend_request_id": 8  #required
 }
 ```
 
@@ -606,7 +609,7 @@ Response body:
 Request body:
 ```JSON
 {
-    "friend_id": 3
+    "friend_id": 3  #required
 }
 ```
 
@@ -753,3 +756,294 @@ Response body:
     "message": "some message"
 }
 ```
+
+**`POST` /api/protected/chats/{chat_id}/messages**
+
+Request body:
+```JSON
+{
+    "receiver_id": 3,  #required
+    "content": "Hi!"   #required
+}
+```
+
+Response body:
+```JSON
+201 Created
+
+{
+    "id": 11,
+    "chat_id": 1,
+    "sender_id": 1,
+    "receiver_id": 3,
+    "content": "Hi!",
+    "created_at": "2026-06-15T09:39:01.869267+03:00"
+}
+```
+```JSON
+400 Bad Request
+
+{
+    "error": "user with id=2 isn't your friend: invalid argument",
+    "message": "failed to create message"
+}
+```
+```JSON
+401 Unauthorized
+
+{
+    "error": "invalid cookie",
+    "message": "check cookie"
+}
+```
+```JSON
+500 Internal Server Error
+
+{
+    "error": "some error",
+    "message": "some message"
+}
+```
+
+**`GET` /api/protected/chats/{chat_id}/messages**
+
+Request body:
+```JSON
+(no body)
+```
+
+Response body:
+```JSON
+200 OK
+
+[
+    {
+        "id": 7,
+        "chat_id": 1,
+        "sender_id": 3,
+        "receiver_id": 1,
+        "content": "Hi brooo!",
+        "created_at": "2026-06-14T22:07:00.826594+03:00"
+    },
+    {
+        "id": 8,
+        "chat_id": 1,
+        "sender_id": 1,
+        "receiver_id": 3,
+        "content": "Oh, my tarnished son...",
+        "created_at": "2026-06-14T22:09:05.370716+03:00"
+    }
+]
+```
+```JSON
+401 Unauthorized
+
+{
+    "error": "invalid cookie",
+    "message": "check cookie"
+}
+```
+```JSON
+500 Internal Server Error
+
+{
+    "error": "some error",
+    "message": "some message"
+}
+```
+
+## WebSocket соединение
+
+### Проверка соединения
+
+| Параметр | Значение | Описание |
+|----------|----------|----------|
+| `pingPeriod` | 54 секунды | Интервал отправки ping фреймов |
+| `pongWait` | 60 секунд | Максимальное время ожидания pong |
+
+Сервер поддерживает соединение через автоматический ping/pong механизм:
+
+1. Сервер отправляет **протокольный ping фрейм** каждые 54 секунды
+2. Клиент должен ответить **pong фреймом** в течение 60 секунд
+3. При превышении таймаута соединение закрывается.
+
+### Сообщения от сервера (примеры)
+
+- Новый зарегистрированный пользователь:
+
+```JSON
+{
+    "type": "user.created",
+    "content": {
+        "id": 1,
+        "username": "KeynySiro",
+        "is_online": false
+    }
+}
+```
+
+- Пользователь изменил username:
+
+```JSON
+{
+    "type": "user.change_username",
+    "content": {
+        "id": 1,
+        "username": "NewUsername",
+        "is_online": true
+    }
+}
+```
+
+- Пользователь отправил заявку в друзья (сообщение получателю):
+
+```JSON
+{
+    "type": "friend_request.received",
+    "content": {
+        "id": 7,
+        "from_user": {
+            "id": 2,
+            "username": "n1x",
+            "is_online": false
+        },
+        "to_user": {
+            "id": 6,
+            "username": "Марк Аврелий",
+            "is_online": false
+        },
+        "created_at": "2026-06-11T15:19:02.616126Z"
+    }
+}
+```
+
+- Пользователь отправил заявку в друзья (сообщение отправителю):
+
+```JSON
+{
+    "type": "friend_request.sent",
+    "content": {
+        "id": 7,
+        "from_user": {
+            "id": 2,
+            "username": "n1x",
+            "is_online": false
+        },
+        "to_user": {
+            "id": 6,
+            "username": "Марк Аврелий",
+            "is_online": false
+        },
+        "created_at": "2026-06-11T15:19:02.616126Z"
+    }
+}
+```
+
+- Пользователь отклонил заявку в друзья (получают оба пользователя):
+
+```JSON
+{
+    "type": "friend_request.declined",
+    "content": {
+        "request_id": 2
+    }
+}
+```
+
+- Пользователь принял заявку в друзья (сообщение принимателю):
+
+```JSON
+{
+    "type": "friend_request.accepted",
+    "content": {
+        "id": 5,
+        "first_user": {
+            "id": 3,
+            "username": "n1x",
+            "is_online": false
+        },
+        "second_user": {
+            "id": 5,
+            "username": "shitai",
+            "is_online": false
+        }
+    }
+}
+```
+
+- Пользователь принял заявку в друзья (сообщение отправителю):
+
+```JSON
+{
+    "type": "friendship.added",
+    "content": {
+        "id": 5,
+        "first_user": {
+            "id": 3,
+            "username": "n1x",
+            "is_online": false
+        },
+        "second_user": {
+            "id": 5,
+            "username": "shitai",
+            "is_online": false
+        }
+    }
+}
+```
+
+- Пользователь удалил друга (получают оба пользователя):
+
+```JSON
+{
+    "type": "friendship.deleted",
+    "content": {
+        "friendship_id": 2
+    }
+}
+```
+
+- Пользователь удалил чат (получают оба пользователя):
+
+```JSON
+{
+    "type": "chat.deleted",
+    "content": {
+        "chat_id": 2
+    }
+}
+```
+
+- Пользователь отправил сообщение в чат (сообщение отправителю):
+
+```JSON
+{
+    "type": "message.sent",
+    "content": {
+        "id": 11,
+        "chat_id": 1,
+        "sender_id": 1,
+        "receiver_id": 3,
+        "content": "Hi!",
+        "created_at": "2026-06-15T09:39:01.869267+03:00"
+    }
+}
+```
+
+- Пользователь отправил сообщение в чат (сообщение получетелю):
+
+```JSON
+{
+    "type": "message.received",
+    "content": {
+        "id": 11,
+        "chat_id": 1,
+        "sender_id": 1,
+        "receiver_id": 3,
+        "content": "Hi!",
+        "created_at": "2026-06-15T09:39:01.869267+03:00"
+    }
+}
+```
+
+
