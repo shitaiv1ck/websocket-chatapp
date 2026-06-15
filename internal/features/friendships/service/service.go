@@ -56,8 +56,8 @@ func (s *FriendshipsService) CreateFriendship(ctx context.Context, userID int, r
 		return domains.Friendship{}, fmt.Errorf("failed to create friendship: %w", err)
 	}
 
-	s.broadcaster.NotifyClientEvent(friendRequest.FromUser.ID, "accepted_friend_request", createdFriendship)
-	s.broadcaster.NotifyClientEvent(friendRequest.ToUser.ID, "added_friend", createdFriendship)
+	s.broadcaster.NotifyClientEvent(friendRequest.FromUser.ID, "friend_request.accepted", createdFriendship)
+	s.broadcaster.NotifyClientEvent(friendRequest.ToUser.ID, "friendship.added", createdFriendship)
 
 	return createdFriendship, nil
 }

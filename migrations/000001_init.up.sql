@@ -61,4 +61,4 @@ CREATE TABLE chat.messages(
     content TEXT NOT NULL CHECK(char_length(content) > 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_messages_chat_id ON chat.messages(chat_id);
+CREATE INDEX idx_messages_chat_id ON chat.messages(chat_id, created_at ASC);

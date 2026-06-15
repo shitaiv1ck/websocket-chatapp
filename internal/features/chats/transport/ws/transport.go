@@ -19,7 +19,7 @@ func NewWSTransport(ws core_ws_server.Broadcaster) *ChatsWSTransport {
 
 func (t *ChatsWSTransport) NotifyDeleteChat(userID int, chatID int) {
 	message := WebSocketMessage{
-		Type:    "deleted_chat",
+		Type:    "chat.deleted",
 		Content: map[string]int{"chat_id": chatID},
 	}
 

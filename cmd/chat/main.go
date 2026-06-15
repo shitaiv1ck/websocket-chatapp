@@ -23,6 +23,10 @@ import (
 	friendships_service "github.com/shitaiv1ck/realtime-chat/internal/features/friendships/service"
 	friendships_http_transport "github.com/shitaiv1ck/realtime-chat/internal/features/friendships/transport/http"
 	friendships_ws_transport "github.com/shitaiv1ck/realtime-chat/internal/features/friendships/transport/ws"
+	messages_repository "github.com/shitaiv1ck/realtime-chat/internal/features/messages/repository"
+	messages_service "github.com/shitaiv1ck/realtime-chat/internal/features/messages/service"
+	messages_http_transport "github.com/shitaiv1ck/realtime-chat/internal/features/messages/transport/http"
+	messages_ws_transport "github.com/shitaiv1ck/realtime-chat/internal/features/messages/transport/ws"
 	sessions_repository "github.com/shitaiv1ck/realtime-chat/internal/features/sessions/repository"
 	sessions_service "github.com/shitaiv1ck/realtime-chat/internal/features/sessions/service"
 	sessions_http_transport "github.com/shitaiv1ck/realtime-chat/internal/features/sessions/transport/http"
@@ -57,20 +61,23 @@ func main() {
 	sessionsRep := sessions_repository.NewRepository(postgresStore)
 	friendRequestsRep := friendrequests_respository.NewRepository(postgresStore)
 	friendshipsRep := friendships_repository.NewRepository(postgresStore)
-	chatsRepository := chats_repository.NewRepository(postgresStore)
+	chatsRep := chats_repository.NewRepository(postgresStore)
+	messagesRep := messages_repository.NewRepository(postgresStore)
 
 	log.Debug("init ws transports...")
 	usersWS := users_ws_transport.NewWSTransport(wsServer)
 	friendRequestsWS := friendrequests_ws_transport.NewWSTransport(wsServer)
 	friendshipsWS := friendships_ws_transport.NewWSTransport(wsServer)
 	chatsWS := chats_ws_transport.NewWSTransport(wsServer)
+	messagesWS := messages_ws_transport.NewWSTransport(wsServer)
 
 	log.Debug("init services...")
 	usersService := users_service.NewService(usersRep, usersWS)
 	sessionsService := sessions_service.NewService(sessionsRep, usersRep)
 	friendRequestsService := friendrequests_service.NewService(friendRequestsRep, friendshipsRep, friendRequestsWS)
 	friendshipsService := friendships_service.NewService(friendshipsRep, friendRequestsRep, friendshipsWS)
-	chatsService := chats_service.NewService(chatsRepository, friendshipsRep, chatsWS)
+	chatsService := chats_service.NewService(chatsRep, friendshipsRep, chatsWS)
+	messagesService := messages_service.NewService(messagesRep, friendshipsRep, messagesWS)
 
 	log.Debug("init http transports...")
 	usersHTTP := users_http_transport.NewHTTPTransport(usersService)
@@ -78,6 +85,7 @@ func main() {
 	friendRequestsHTTP := friendrequests_http_transport.NewTransport(friendRequestsService)
 	friendshipsHTTP := friendships_http_transport.NewHTTPTransport(friendshipsService)
 	chatsHTTP := chats_http_transport.NewHTTPTransport(chatsService)
+	messagesHTTP := messages_http_transport.NewHTTPTransport(messagesService)
 
 	protected := http.NewServeMux()
 	protected.Handle("GET /users/me", usersHTTP.GetMeHandler())
@@ -92,6 +100,8 @@ func main() {
 	protected.Handle("POST /chats", chatsHTTP.CreateOrGetChatHandler())
 	protected.Handle("GET /chats", chatsHTTP.GetChatsHandler())
 	protected.Handle("DELETE /chats/{chat_id}", chatsHTTP.DeleteChatHandler())
+	protected.Handle("POST /chats/{chat_id}/messages", messagesHTTP.CreateMessageHandler())
+	protected.Handle("GET /chats/{chat_id}/messages", messagesHTTP.GetMessagesHandler())
 
 	protectedHandler := core_middleware.ProtectedMiddleware(protected, sessionsService)
 

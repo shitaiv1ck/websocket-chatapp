@@ -49,7 +49,7 @@ func (t *FriendshipsWSTransport) NotifyClientEvent(userID int, event string, fri
 
 func (t *FriendshipsWSTransport) NotifyDeletedFriendship(userID int, friendshipID int) {
 	message := WebSocketMessage{
-		Type:    "deleted_friendship",
+		Type:    "friendship.deleted",
 		Content: map[string]int{"friendship_id": friendshipID},
 	}
 

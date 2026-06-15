@@ -11,7 +11,7 @@ import (
 
 type FriendRequestsService struct {
 	friendRequestsRep FriendRequestsRepository
-	friendshipsRep    FriendshipRepository
+	friendshipsRep    FriendshipsRepository
 	broadcaster       FriendRequestsWSTransport
 }
 
@@ -23,7 +23,7 @@ type FriendRequestsRepository interface {
 	Delete(ctx context.Context, userID int, requestID int) (domains.FriendRequest, error)
 }
 
-type FriendshipRepository interface {
+type FriendshipsRepository interface {
 	FindByUsers(ctx context.Context, firstUserID int, secondUserID int) (domains.Friendship, error)
 }
 
@@ -34,7 +34,7 @@ type FriendRequestsWSTransport interface {
 
 func NewService(
 	friendRequestsRep FriendRequestsRepository,
-	friendshipRep FriendshipRepository,
+	friendshipRep FriendshipsRepository,
 	broadcaster FriendRequestsWSTransport,
 ) *FriendRequestsService {
 	return &FriendRequestsService{
@@ -72,8 +72,8 @@ func (s *FriendRequestsService) CreateFriendRequest(ctx context.Context, request
 		return domains.FriendRequest{}, err
 	}
 
-	s.broadcaster.NotifyClientEvent(request.ToUser.ID, "received_friend_request", createdFriendRequest)
-	s.broadcaster.NotifyClientEvent(request.FromUser.ID, "sent_friend_request", createdFriendRequest)
+	s.broadcaster.NotifyClientEvent(request.ToUser.ID, "friend_request.received", createdFriendRequest)
+	s.broadcaster.NotifyClientEvent(request.FromUser.ID, "friend_request.sent", createdFriendRequest)
 
 	return createdFriendRequest, nil
 }
