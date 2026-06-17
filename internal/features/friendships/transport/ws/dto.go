@@ -6,9 +6,10 @@ type WebSocketMessage struct {
 }
 
 type FriendshipDTOResponse struct {
-	ID         int             `json:"id"`
-	FirstUser  UserDTOResponse `json:"first_user"`
-	SecondUser UserDTOResponse `json:"second_user"`
+	FriendRequestID int             `json:"friend_request_id"`
+	FriendshipID    int             `json:"friendship_id"`
+	FirstUser       UserDTOResponse `json:"first_user"`
+	SecondUser      UserDTOResponse `json:"second_user"`
 }
 
 type UserDTOResponse struct {

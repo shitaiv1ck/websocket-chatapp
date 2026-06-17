@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="auth-view" class="auth-wrapper">
+        <div class="auth-container">
+            <h1>ChatApp</h1>
+            <div id="login-container">
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-username">Имя пользователя</label>
+                        <input type="text" id="login-username" required minlength="3" maxlength="100"
+                            placeholder="Введите логин">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Пароль</label>
+                        <input type="password" id="login-password" required minlength="8" maxlength="100"
+                            placeholder="Введите пароль">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Войти</button>
+                </form>
+                <div class="switch-form">Нет аккаунта? <a id="show-register">Зарегистрироваться</a></div>
+            </div>
+            <div id="register-container" class="hidden">
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="reg-username">Имя пользователя</label>
+                        <input type="text" id="reg-username" required minlength="3" maxlength="100"
+                            placeholder="Придумайте логин">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Пароль</label>
+                        <input type="password" id="reg-password" required minlength="8" maxlength="100"
+                            placeholder="Придумайте пароль">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Создать аккаунт</button>
+                </form>
+                <div class="switch-form">Уже есть аккаунт? <a id="show-login">Войти</a></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-view" class="app-layout hidden">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="user-info" id="user-info-clickable">
+                    <div class="user-avatar" id="user-avatar">?</div>
+                    <div>
+                        <div class="user-name" id="user-name">Пользователь</div>
+                        <div class="user-status" id="user-status">Офлайн</div>
+                    </div>
+                </div>
+                <button id="logout-btn" class="btn btn-logout">Выйти</button>
+            </div>
+            <div class="sidebar-tabs">
+                <button class="tab-btn active" data-tab="chats">Чаты</button>
+                <button class="tab-btn" data-tab="friends">Друзья</button>
+                <button class="tab-btn" data-tab="requests">Заявки <span id="requests-badge"
+                        class="badge hidden">0</span></button>
+                <button class="tab-btn" data-tab="users">Поиск</button>
+            </div>
+            <div class="sidebar-content" id="sidebar-content"></div>
+        </aside>
+        <main class="chat-area">
+            <div id="chat-empty" class="empty-chat">
+                <div class="empty-chat-icon">💬</div>
+                <div class="empty-chat-text">Выберите чат для начала общения</div>
+            </div>
+            <div id="chat-active" class="hidden">
+                <div class="chat-header">
+                    <div class="chat-header-avatar" id="chat-header-avatar">?</div>
+                    <div class="chat-header-info">
+                        <div class="chat-header-name" id="chat-header-name">Имя собеседника</div>
+                        <div class="chat-header-status" id="chat-header-status">Офлайн</div>
+                    </div>
+                    <button class="btn btn-small btn-delete" id="delete-chat-btn">Удалить чат</button>
+                </div>
+                <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-input-area">
+                    <div class="chat-input-wrapper">
+                        <textarea class="chat-input" id="message-input" placeholder="Введите сообщение..."
+                            rows="1"></textarea>
+                        <button class="btn btn-send" id="send-btn">Отправить</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="edit-profile-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>Редактировать профиль</h2>
+            <form id="edit-profile-form">
+                <div class="form-group">
+                    <label for="edit-username">Новое имя пользователя</label>
+                    <input type="text" id="edit-username" minlength="3" maxlength="100"
+                        placeholder="Оставьте пустым, чтобы не менять">
+                </div>
+                <div class="form-group">
+                    <label for="edit-old-password">Текущий пароль</label>
+                    <input type="password" id="edit-old-password" minlength="8" maxlength="100"
+                        placeholder="Необходим для смены пароля">
+                </div>
+                <div class="form-group">
+                    <label for="edit-new-password">Новый пароль</label>
+                    <input type="password" id="edit-new-password" minlength="8" maxlength="100"
+                        placeholder="Оставьте пустым, чтобы не менять">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" id="cancel-edit-profile">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

@@ -5,7 +5,7 @@ import (
 )
 
 type FriendRequestDTOResponse struct {
-	ID        int             `json:"request_id"`
+	ID        int             `json:"friend_request_id"`
 	FromUser  UserDTOResponse `json:"from_user"`
 	ToUser    UserDTOResponse `json:"to_user"`
 	CreatedAt time.Time       `json:"created_at"`

@@ -18,7 +18,7 @@ type UsersHTTPTransport struct {
 
 type UsersService interface {
 	CreateUser(ctx context.Context, user domains.User) (domains.User, error)
-	GetUsers(ctx context.Context, limit *int, offset *int) ([]domains.User, error)
+	GetUsers(ctx context.Context, search *string, limit *int, offset *int) ([]domains.User, error)
 	GetUser(ctx context.Context, userID int) (domains.User, error)
 	PatchUser(ctx context.Context, userID int, patch domains.UserPatch) (domains.User, error)
 }
@@ -108,6 +108,8 @@ func (t *UsersHTTPTransport) GetUsersHandler() http.HandlerFunc {
 
 		log.Debug("invoke GetUsers handler")
 
+		search := core_request.GetStringQueryParam(r, "search")
+
 		limit, err := core_request.GetIntQueryParam(r, "limit")
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to get query param")
@@ -122,7 +124,7 @@ func (t *UsersHTTPTransport) GetUsersHandler() http.HandlerFunc {
 			return
 		}
 
-		users, err := t.service.GetUsers(r.Context(), limit, offset)
+		users, err := t.service.GetUsers(r.Context(), search, limit, offset)
 		if err != nil {
 			responseHandler.ErrorResponse(err, "failed to get users")
 

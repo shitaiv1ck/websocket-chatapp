@@ -139,8 +139,8 @@ func (s *FriendRequestsService) DeleteFriendRequest(ctx context.Context, userID 
 		return err
 	}
 
-	s.broadcaster.NotifyDeclinedRequest(userID, deletedRequest.FromUser.ID)
-	s.broadcaster.NotifyDeclinedRequest(userID, deletedRequest.ToUser.ID)
+	s.broadcaster.NotifyDeclinedRequest(deletedRequest.FromUser.ID, requestID)
+	s.broadcaster.NotifyDeclinedRequest(deletedRequest.ToUser.ID, requestID)
 
 	return nil
 }

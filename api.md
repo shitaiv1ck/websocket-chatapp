@@ -8,31 +8,31 @@
 | ------------------------------------- | ------------------------------------- |
 | /ws                                   | Открывает websocket соединение |
 | `POST` /api/users                     | Регистрирует нового пользователя |
-| `GET` /api/users?limit=&offset=       | Возвращает список пользователей с заданными параметрами `limit` и `offset` (если не заданы, то возвращает всех пользователей) |
-| `GET` /api/protected/users/me         | Возвращает текущую сессию пользователя |
-| `PATCH` /api/protected/users          | Изменяет логин или пароль пользователя |
+| `GET` /api/users?search=&limit=&offset=       | Возвращает список пользователей с заданными параметрами `search`, `limit` и `offset` (если не заданы, то возвращает всех пользователей) |
+| `GET` /api/users/me         | Возвращает текущую сессию пользователя |
+| `PATCH` /api/users          | Изменяет логин или пароль пользователя |
 | `POST` /api/sessions                  | Создает новую сессию для пользователя |
-| `DELETE` /api/protected/sessions      | Удаляет текущую сессию пользователя |
-| `POST` /api/protected/friend-requests | Отправляет заявку в друзья пользователю |
-| `GET` /api/protected/friend-requests?direction= | Возвращает исходящие (`direction=outgoing`) или входящие (`direction=incoming` или не задано) заявки в друзья |
-| `DELETE` /api/protected/friend-requests/{friend_request_id} | Отклоняет заявку в друзья |
-| `POST` /api/protected/friendships | Принимает заявку в друзья |
-| `GET` /api/protected/friendships?limit=&offset= | Возвращает список друзей с заданными параметрами `limit` и `offset` (если не заданы, то возвращает всех друзей)|
-| `DELETE` /api/protected/friendships/{friendship_id} | Удаляет друга |
-| `POST` /api/protected/chats | Создает или возвращает чат с другом |
-| `GET` /api/protected/chats?limit=&offset= | Возващает список чатов с заданными параметрами `limit` и `offset` (если не заданы, то возвращает все чаты) |
-| `DELETE` /api/protected/chats/{chat_id} | Удаляет чат |
-| `POST` /api/protected/chats/{chat_id}/messages | Отправляет сообщение в чат |
-| `GET` /api/protected/chats/{chat_id}/messages | Возвращает отсортированный список всех сообщений в чате |
+| `DELETE` /api/sessions      | Удаляет текущую сессию пользователя |
+| `POST` /api/friend-requests | Отправляет заявку в друзья пользователю |
+| `GET` /api/friend-requests?direction= | Возвращает исходящие (`direction=outgoing`) или входящие (`direction=incoming` или не задано) заявки в друзья |
+| `DELETE` /api/friend-requests/{friend_request_id} | Отклоняет заявку в друзья |
+| `POST` /api/friendships | Принимает заявку в друзья |
+| `GET` /api/friendships?limit=&offset= | Возвращает список друзей с заданными параметрами `limit` и `offset` (если не заданы, то возвращает всех друзей)|
+| `DELETE` /api/friendships/{friendship_id} | Удаляет друга |
+| `POST` /api/chats | Создает или возвращает чат с другом |
+| `GET` /api/chats?limit=&offset= | Возващает список чатов с заданными параметрами `limit` и `offset` (если не заданы, то возвращает все чаты) |
+| `DELETE` /api/chats/{chat_id} | Удаляет чат |
+| `POST` /api/chats/{chat_id}/messages | Отправляет сообщение в чат |
+| `GET` /api/chats/{chat_id}/messages | Возвращает отсортированный список всех сообщений в чате |
 
 
 ### Примечание 
 
-Решение сделать паттерн `POST /api/protected/chats` идемпотентным было принято, чтобы избежать конфликта, когда пользователь А и пользователь Б одновременно захотели начать новый чат друг с другом
+Решение сделать паттерн `POST /api/chats` идемпотентным было принято, чтобы избежать конфликта, когда пользователь А и пользователь Б одновременно захотели начать новый чат друг с другом
 
 ### CSRF Protection
 
- Для паттернов группы `/api/protected/*` обязательна пройденная аутентификация. Помимо этого, для методов `POST`, `PATCH`, `DELETE` в этой же группе обязателен заголовок `X-CSRF-Token`
+Для методов `POST`, `PATCH`, `DELETE` обязателен заголовок `X-CSRF-Token`, **кроме** паттернов `POST` /api/sessions и  `POST` /api/users
 
 ### Аутентификация
 
@@ -53,13 +53,13 @@
 
 | Код | Описание | Эндпоинты |
 |-----|----------|-----------|
-| 200 | Успешный GET / POST (идемпотентный) | `GET /api/users`, `GET /api/protected/users/me`, `GET /api/protected/friend-requests`, `GET /api/protected/friendships`, `GET /api/protected/chats`, `GET /api/protected/chats/{chat_id}/messages`, `POST /api/protected/chats` (чат уже существовал) |
-| 201 | Успешное создание | `POST /api/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `POST /api/protected/friendships`, `POST /api/protected/chats/{chat_id}/messages` |
-| 204 | Успешное удаление | `DELETE /api/protected/sessions`, `DELETE /api/protected/friend-requests/{id}`, `DELETE /api/protected/friendships/{id}`, `DELETE /api/protected/chats/{id}` |
-| 400 | Ошибка валидации | `POST /api/users`, `PATCH /api/protected/users`, `POST /api/sessions`, `POST /api/protected/friend-requests`, `POST /api/protected/friendships`, `POST /api/protected/chats` (попытка создать чат с собой), `POST /api/protected/chats/{chat_id}/messages` (пользователь не друг), `DELETE /api/protected/chats/{id}` (неверный формат ID) |
-| 401 | Не авторизован | Все `/api/protected/*`, `POST /api/sessions` |
-| 404 | Ресурс не найден | `POST /api/protected/friend-requests` (пользователь не существует), `DELETE /api/protected/friend-requests/{id}` (заявка не найдена), `POST /api/protected/friendships` (запрос не найден), `DELETE /api/protected/friendships/{id}` (дружба не найдена), `POST /api/protected/chats` (друг не найден), `DELETE /api/protected/chats/{id}` (чат не найден), `POST /api/protected/chats/{chat_id}/messages` (чат не найден), `GET /api/protected/chats/{chat_id}/messages` (чат не найден) |
-| 409 | Конфликт (уже существует) | `POST /api/users` (username занят), `PATCH /api/protected/users` (username занят), `POST /api/protected/friend-requests` (заявка уже отправлена или уже друзья) |
+| 200 | Успешный GET / POST (идемпотентный) | `GET /api/users`, `GET /api/users/me`, `GET /api/friend-requests`, `GET /api/friendships`, `GET /api/chats`, `GET /api/chats/{chat_id}/messages`, `POST /api/chats` (чат уже существовал) |
+| 201 | Успешное создание | `POST /api/users`, `POST /api/sessions`, `POST /api/friend-requests`, `POST /api/friendships`, `POST /api/chats/{chat_id}/messages` |
+| 204 | Успешное удаление | `DELETE /api/sessions`, `DELETE /api/friend-requests/{id}`, `DELETE /api/friendships/{id}`, `DELETE /api/chats/{id}` |
+| 400 | Ошибка валидации | `POST /api/users`, `PATCH /api/users`, `POST /api/sessions`, `POST /api/friend-requests`, `POST /api/friendships`, `POST /api/chats` (попытка создать чат с собой), `POST /api/chats/{chat_id}/messages` (пользователь не друг), `DELETE /api/chats/{id}` (неверный формат ID) |
+| 401 | Не авторизован | Все эндпоинты кроме `POST /api/users`, `GET /api/users`, `POST /api/sessions`. Также `GET /api/users/me`, `PATCH /api/users`, `DELETE /api/sessions` и все эндпоинты `/api/friend-requests`, `/api/friendships`, `/api/chats`, `/api/chats/{chat_id}/messages` |
+| 404 | Ресурс не найден | `POST /api/friend-requests` (пользователь не существует), `DELETE /api/friend-requests/{id}` (заявка не найдена), `POST /api/friendships` (запрос не найден), `DELETE /api/friendships/{id}` (дружба не найдена), `POST /api/chats` (друг не найден), `DELETE /api/chats/{id}` (чат не найден), `POST /api/chats/{chat_id}/messages` (чат не найден), `GET /api/chats/{chat_id}/messages` (чат не найден) |
+| 409 | Конфликт (уже существует) | `POST /api/users` (username занят), `PATCH /api/users` (username занят), `POST /api/friend-requests` (заявка уже отправлена или уже друзья) |
 | 500 | Внутренняя ошибка сервера | Любой |
 
 ## Примеры JSON в теле запроса/ответа
@@ -109,6 +109,7 @@ Response body:
 ```
 
 **`GET` /api/users:**
+
 Request body:
 ```JSON
 (no body)
@@ -145,7 +146,7 @@ Response body:
 }
 ```
 
-**`GET` /api/protected/users/me**
+**`GET` /api/users/me**
 
 Request body:
 ```JSON
@@ -179,7 +180,8 @@ Response body:
 }
 ```
 
-**`PATCH` /api/protected/users**
+**`PATCH` /api/users**
+
 Request body:
 ```JSON
 {
@@ -263,7 +265,7 @@ Response body:
 }
 ```
 
-`DELETE` /api/protected/sessions
+**`DELETE` /api/sessions**
 
 Request body:
 ```JSON
@@ -293,7 +295,7 @@ Response body:
 }
 ```
 
-**`POST` /api/protected/friend-requests**
+**`POST` /api/friend-requests**
 
 Request body:
 ```JSON
@@ -346,7 +348,7 @@ Response body:
 }
 ```
 
-**`GET` /api/protected/friend-requests**
+**`GET` /api/friend-requests**
 
 Request body:
 ```JSON
@@ -419,7 +421,7 @@ Response body:
 }
 ```
 
-**`DELETE` /api/protected/friend-requests/{friend_request_id}**
+**`DELETE` /api/friend-requests/{friend_request_id}**
 
 Request body:
 ```JSON
@@ -457,7 +459,7 @@ Response body:
 }
 ```
 
-**`POST` /api/protected/friendships**
+**`POST` /api/friendships**
 
 Request body:
 ```JSON
@@ -509,7 +511,7 @@ Response body:
 }
 ```
 
-**`GET` /api/protected/friendships**
+**`GET` /api/friendships**
 
 Request body:
 ```JSON
@@ -566,7 +568,7 @@ Response body:
 }
 ```
 
-**`DELETE` /api/protected/friendships/{friendships_id}**
+**`DELETE` /api/friendships/{friendships_id}**
 
 Request body:
 ```JSON
@@ -604,7 +606,7 @@ Response body:
 }
 ```
 
-**`POST` /api/protected/chats**
+**`POST` /api/chats**
 
 Request body:
 ```JSON
@@ -658,7 +660,7 @@ Response body:
 }
 ```
 
-**`GET` /api/protected/chats**
+**`GET` /api/chats**
 
 Request body:
 ```JSON
@@ -719,7 +721,7 @@ Response body:
 }
 ```
 
-**`DELETE` /api/protected/chats/{chat_id}**
+**`DELETE` /api/chats/{chat_id}**
 
 Request body:
 ```JSON
@@ -757,7 +759,7 @@ Response body:
 }
 ```
 
-**`POST` /api/protected/chats/{chat_id}/messages**
+**`POST` /api/chats/{chat_id}/messages**
 
 Request body:
 ```JSON
@@ -805,7 +807,7 @@ Response body:
 }
 ```
 
-**`GET` /api/protected/chats/{chat_id}/messages**
+**`GET` /api/chats/{chat_id}/messages**
 
 Request body:
 ```JSON
@@ -869,7 +871,7 @@ Response body:
 
 ### Сообщения от сервера (примеры)
 
-- Новый зарегистрированный пользователь:
+- Новый зарегистрированный пользователь (получают все пользователи):
 
 ```JSON
 {
@@ -882,7 +884,20 @@ Response body:
 }
 ```
 
-- Пользователь изменил username:
+- Пользователь стал онлайн/оффлайн (получают все пользователи):
+
+```JSON
+{
+    "type": "user.change_status",
+    "content": {
+        "id": 1,
+        "username": "KeynySiro",
+        "is_online": true
+    }
+}
+```
+
+- Пользователь изменил username (получают все пользователи):
 
 ```JSON
 {
@@ -895,13 +910,13 @@ Response body:
 }
 ```
 
-- Пользователь отправил заявку в друзья (сообщение получателю):
+- Пользователь отправил заявку в друзья (получает тот, кому отправили заявку в друзья):
 
 ```JSON
 {
     "type": "friend_request.received",
     "content": {
-        "id": 7,
+        "friend_request_id": 2,
         "from_user": {
             "id": 2,
             "username": "n1x",
@@ -917,13 +932,13 @@ Response body:
 }
 ```
 
-- Пользователь отправил заявку в друзья (сообщение отправителю):
+- Пользователь отправил заявку в друзья (получает тот, кто отправил заявку в друзья):
 
 ```JSON
 {
     "type": "friend_request.sent",
     "content": {
-        "id": 7,
+        "friend_request_id": 2,
         "from_user": {
             "id": 2,
             "username": "n1x",
@@ -945,18 +960,19 @@ Response body:
 {
     "type": "friend_request.declined",
     "content": {
-        "request_id": 2
+        "friend_request_id": 2
     }
 }
 ```
 
-- Пользователь принял заявку в друзья (сообщение принимателю):
+- Пользователь принял заявку в друзья (получает тот, кто принял заявку):
 
 ```JSON
 {
     "type": "friend_request.accepted",
     "content": {
-        "id": 5,
+        "friend_request_id":2,
+        "friendship_id": 5,
         "first_user": {
             "id": 3,
             "username": "n1x",
@@ -971,13 +987,14 @@ Response body:
 }
 ```
 
-- Пользователь принял заявку в друзья (сообщение отправителю):
+- Пользователь принял заявку в друзья (получает тот, чью заявку приняли):
 
 ```JSON
 {
     "type": "friendship.added",
     "content": {
-        "id": 5,
+        "friend_request_id":2,
+        "friendship_id": 5,
         "first_user": {
             "id": 3,
             "username": "n1x",
@@ -1003,6 +1020,29 @@ Response body:
 }
 ```
 
+- Пользователь создал чат (получают оба пользователя):
+
+```JSON
+{
+    "type": "chat.created",
+    "content": {
+        "id": 7,
+        "first_user": {
+            "id": 2,
+            "username": "n1x",
+            "is_online": false
+        },
+        "second_user": {
+            "id": 3,
+            "username": "Марк Аврелий",
+            "is_online": false
+        },
+        "last_message_content": null,
+        "last_message_at": "2026-06-14T15:37:57.62259+03:00"
+    }
+}
+```
+
 - Пользователь удалил чат (получают оба пользователя):
 
 ```JSON
@@ -1014,7 +1054,7 @@ Response body:
 }
 ```
 
-- Пользователь отправил сообщение в чат (сообщение отправителю):
+- Пользователь отправил сообщение в чат (получает тот, кто отправил сообщение):
 
 ```JSON
 {
@@ -1030,7 +1070,7 @@ Response body:
 }
 ```
 
-- Пользователь отправил сообщение в чат (сообщение получетелю):
+- Пользователь отправил сообщение в чат (получает тот, кому отправили сообщение):
 
 ```JSON
 {
@@ -1045,5 +1085,3 @@ Response body:
     }
 }
 ```
-
-

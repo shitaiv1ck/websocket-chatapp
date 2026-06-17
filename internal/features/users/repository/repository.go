@@ -53,18 +53,32 @@ func (r *UsersRepository) Save(ctx context.Context, user domains.User) (domains.
 	return createdUser, nil
 }
 
-func (r *UsersRepository) FindAll(ctx context.Context, limit *int, offset *int) ([]domains.User, error) {
+func (r *UsersRepository) FindAll(ctx context.Context, search *string, limit *int, offset *int) ([]domains.User, error) {
 	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
 	defer cancel()
 
 	query := `
 		SELECT id, username, is_online
 		FROM chat.users
-		LIMIT $1
-		OFFSET $2;
 	`
 
-	rows, err := r.store.Query(ctx, query, limit, offset)
+	args := make([]any, 0)
+	if search == nil || *search == "" {
+		query += `
+			LIMIT $1
+			OFFSET $2;
+		`
+		args = append(args, limit, offset)
+	} else {
+		query += `
+			WHERE username LIKE $1
+			LIMIT $2
+			OFFSET $3;
+		`
+		args = append(args, "%"+*search+"%", limit, offset)
+	}
+
+	rows, err := r.store.Query(ctx, query, args...)
 	if err != nil {
 		return []domains.User{}, err
 	}
@@ -180,4 +194,38 @@ func (r *UsersRepository) Update(ctx context.Context, user domains.User) (domain
 	}
 
 	return patchedUser, nil
+}
+
+func (r *UsersRepository) UpdateStatus(ctx context.Context, userID int, isOnline bool) (domains.User, error) {
+	ctx, cancel := context.WithTimeout(ctx, r.store.GetTimeout())
+	defer cancel()
+
+	query := `
+		UPDATE chat.users
+		SET is_online = $1
+		WHERE id = $2
+		RETURNING id, username, is_online
+	`
+
+	var user domains.User
+	if err := r.store.QueryRow(
+		ctx,
+		query,
+		isOnline,
+		userID,
+	).Scan(
+		&user.ID,
+		&user.Username,
+		&user.IsOnline,
+	); err != nil {
+		if errPQ, ok := err.(*pgconn.PgError); ok {
+			if errPQ.Code == "23505" {
+				return domains.User{}, core_errors.ErrConflict
+			}
+		}
+
+		return domains.User{}, err
+	}
+
+	return user, nil
 }

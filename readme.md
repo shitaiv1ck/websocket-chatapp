@@ -1,6 +1,6 @@
-# REALTIME CHAT
+# WEBSOCKET CHATAPP
 
-One-to-one чат, разработанный по принцам REST API и использующий протокол WebSocket для real-time уведомлений
+Веб-приложение one-to-one чат, разработанный по принцам REST API и использующий протокол WebSocket для real-time уведомлений
 
 # Документация
 

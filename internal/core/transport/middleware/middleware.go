@@ -23,6 +23,7 @@ func ChainMiddleware(h http.Handler, m ...Middleware) http.Handler {
 func CommonMiddleware(h http.Handler, log *core_logger.Logger) http.Handler {
 	return ChainMiddleware(
 		h,
+		CORS(),
 		RequestID(),
 		Logger(log),
 		Trace(),
@@ -32,6 +33,16 @@ func CommonMiddleware(h http.Handler, log *core_logger.Logger) http.Handler {
 func ProtectedMiddleware(h http.Handler, service SessionsService) http.Handler {
 	return ChainMiddleware(
 		h,
+		Authorization(service),
+	)
+}
+
+func WebSocketMiddleware(h http.Handler, log *core_logger.Logger, service SessionsService) http.Handler {
+	return ChainMiddleware(
+		h,
+		CORS(),
+		RequestID(),
+		Logger(log),
 		Authorization(service),
 	)
 }

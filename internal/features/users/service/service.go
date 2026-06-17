@@ -15,9 +15,10 @@ type UsersService struct {
 
 type UsersRepository interface {
 	Save(ctx context.Context, user domains.User) (domains.User, error)
-	FindAll(ctx context.Context, limit *int, offset *int) ([]domains.User, error)
+	FindAll(ctx context.Context, search *string, limit *int, offset *int) ([]domains.User, error)
 	FindByID(ctx context.Context, id int) (domains.User, error)
 	Update(ctx context.Context, user domains.User) (domains.User, error)
+	UpdateStatus(ctx context.Context, userID int, isOnline bool) (domains.User, error)
 }
 
 type UsersWSTransport interface {
@@ -50,7 +51,7 @@ func (s *UsersService) CreateUser(ctx context.Context, user domains.User) (domai
 	return createdUser, nil
 }
 
-func (s *UsersService) GetUsers(ctx context.Context, limit *int, offset *int) ([]domains.User, error) {
+func (s *UsersService) GetUsers(ctx context.Context, search *string, limit *int, offset *int) ([]domains.User, error) {
 	if limit != nil && *limit < 0 {
 		return []domains.User{}, fmt.Errorf("limit must be non negative: %w", core_errors.ErrInvalidArg)
 	}
@@ -59,7 +60,7 @@ func (s *UsersService) GetUsers(ctx context.Context, limit *int, offset *int) ([
 		return []domains.User{}, fmt.Errorf("offset must be non negative: %w", core_errors.ErrInvalidArg)
 	}
 
-	users, err := s.rep.FindAll(ctx, limit, offset)
+	users, err := s.rep.FindAll(ctx, search, limit, offset)
 	if err != nil {
 		return []domains.User{}, fmt.Errorf("failed to get users from repository: %w", err)
 	}
@@ -106,4 +107,15 @@ func (s *UsersService) PatchUser(ctx context.Context, userID int, patch domains.
 	}
 
 	return patchedUser, nil
+}
+
+func (s *UsersService) UpdateOnline(ctx context.Context, userID int, isOnline bool) error {
+	user, err := s.rep.UpdateStatus(ctx, userID, isOnline)
+	if err != nil {
+		return err
+	}
+
+	s.broadcaster.BroadcastEvent("user.change_status", user)
+
+	return nil
 }

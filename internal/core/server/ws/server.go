@@ -26,6 +26,12 @@ type Server struct {
 	upgrader *websocket.Upgrader
 	mtx      sync.RWMutex
 	log      *core_logger.Logger
+
+	service UsersService
+}
+
+type UsersService interface {
+	UpdateOnline(ctx context.Context, userID int, isOnline bool) error
 }
 
 const (
@@ -41,10 +47,17 @@ func NewServer(logger *core_logger.Logger) *Server {
 		upgrader: &websocket.Upgrader{
 			ReadBufferSize:  readBufferSize,
 			WriteBufferSize: writeBufferSize,
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
 		},
 		mtx: sync.RWMutex{},
 		log: logger,
 	}
+}
+
+func (s *Server) SetService(service UsersService) {
+	s.service = service
 }
 
 func (s *Server) GetLogger() *core_logger.Logger {
@@ -60,11 +73,14 @@ func (s *Server) Run(ctx context.Context) {
 			return
 		case client := <-s.join:
 			s.mtx.Lock()
-			if _, ok := s.clients[client.id]; !ok {
-				s.clients[client.id] = client
-				s.log.Debug("client join", zap.Int("client-id", client.id))
-			}
+			s.clients[client.id] = client
 			s.mtx.Unlock()
+
+			if err := s.service.UpdateOnline(context.Background(), client.id, true); err != nil {
+				s.log.Debug("failed to change user's online", zap.Int("user-id", client.id))
+			}
+
+			s.log.Debug("client join", zap.Int("client-id", client.id))
 		case client := <-s.leave:
 			s.mtx.Lock()
 			if _, ok := s.clients[client.id]; ok {
@@ -72,6 +88,11 @@ func (s *Server) Run(ctx context.Context) {
 				close(client.receive)
 			}
 			s.mtx.Unlock()
+
+			if err := s.service.UpdateOnline(context.Background(), client.id, false); err != nil {
+				s.log.Debug("failed to change user's online", zap.Int("user-id", client.id))
+			}
+
 			s.log.Debug("client leave", zap.Int("client-id", client.id))
 		}
 	}

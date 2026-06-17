@@ -127,6 +127,10 @@ chat
 ├─ migrations
 │  ├─ 000001_init.down.sql
 │  └─ 000001_init.up.sql
+├─ public
+│  ├─ app.js
+│  ├─ index.html
+│  └─ style.css
 └─ readme.md
 
 ```
