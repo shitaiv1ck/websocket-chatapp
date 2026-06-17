@@ -18,9 +18,10 @@ func NewWSTransport(ws core_ws_server.Broadcaster) *FriendshipsWSTransport {
 	}
 }
 
-func (t *FriendshipsWSTransport) NotifyClientEvent(userID int, event string, friendship domains.Friendship) {
+func (t *FriendshipsWSTransport) NotifyClientEvent(userID int, event string, friendship domains.Friendship, requestID int) {
 	content := FriendshipDTOResponse{
-		ID: friendship.ID,
+		FriendRequestID: requestID,
+		FriendshipID:    friendship.ID,
 		FirstUser: UserDTOResponse{
 			ID:       friendship.FirstUser.ID,
 			Username: friendship.FirstUser.Username,

@@ -25,7 +25,7 @@ type FriendRequestsRepository interface {
 }
 
 type FriendshipsWSTransport interface {
-	NotifyClientEvent(userID int, event string, friendship domains.Friendship)
+	NotifyClientEvent(userID int, event string, friendship domains.Friendship, requestID int)
 	NotifyDeletedFriendship(userID int, friendshipID int)
 }
 
@@ -56,8 +56,18 @@ func (s *FriendshipsService) CreateFriendship(ctx context.Context, userID int, r
 		return domains.Friendship{}, fmt.Errorf("failed to create friendship: %w", err)
 	}
 
-	s.broadcaster.NotifyClientEvent(friendRequest.FromUser.ID, "friend_request.accepted", createdFriendship)
-	s.broadcaster.NotifyClientEvent(friendRequest.ToUser.ID, "friendship.added", createdFriendship)
+	s.broadcaster.NotifyClientEvent(
+		friendRequest.FromUser.ID,
+		"friend_request.accepted",
+		createdFriendship,
+		friendRequest.ID,
+	)
+	s.broadcaster.NotifyClientEvent(
+		friendRequest.ToUser.ID,
+		"friendship.added",
+		createdFriendship,
+		friendRequest.ID,
+	)
 
 	return createdFriendship, nil
 }
@@ -90,8 +100,8 @@ func (s *FriendshipsService) DeleteFriendship(ctx context.Context, userID int, f
 		return fmt.Errorf("failed to delete friendship: %w", err)
 	}
 
-	s.broadcaster.NotifyDeletedFriendship(userID, deletedFriendship.FirstUser.ID)
-	s.broadcaster.NotifyDeletedFriendship(userID, deletedFriendship.SecondUser.ID)
+	s.broadcaster.NotifyDeletedFriendship(deletedFriendship.FirstUser.ID, friendshipID)
+	s.broadcaster.NotifyDeletedFriendship(deletedFriendship.SecondUser.ID, friendshipID)
 
 	return nil
 }

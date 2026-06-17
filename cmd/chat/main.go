@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
 	"os/signal"
+	"path"
 	"syscall"
 
 	core_logger "github.com/shitaiv1ck/realtime-chat/internal/core/logger"
@@ -54,7 +56,6 @@ func main() {
 
 	log.Debug("init ws server...")
 	wsServer := core_ws_server.NewServer(log)
-	go wsServer.Run(ctx)
 
 	log.Debug("init repositories...")
 	usersRep := users_repository.NewRepository(postgresStore)
@@ -87,6 +88,9 @@ func main() {
 	chatsHTTP := chats_http_transport.NewHTTPTransport(chatsService)
 	messagesHTTP := messages_http_transport.NewHTTPTransport(messagesService)
 
+	wsServer.SetService(usersService)
+	go wsServer.Run(ctx)
+
 	protected := http.NewServeMux()
 	protected.Handle("GET /users/me", usersHTTP.GetMeHandler())
 	protected.Handle("PATCH /users", usersHTTP.PatchUserHandler())
@@ -106,16 +110,25 @@ func main() {
 	protectedHandler := core_middleware.ProtectedMiddleware(protected, sessionsService)
 
 	common := http.NewServeMux()
-	common.Handle("/ws", wsServer)
+	common.Handle("/", http.FileServer(http.Dir(path.Join(os.Getenv("PROJECT_ROOT"), "/public"))))
 	common.Handle("POST /api/users", usersHTTP.CreateUserHandler())
 	common.Handle("GET /api/users", usersHTTP.GetUsersHandler())
 	common.Handle("POST /api/sessions", sessionsHTTP.CreateSessionHandler())
-	common.Handle("/api/protected/", http.StripPrefix("/api/protected", protectedHandler))
+	common.Handle("/api/", http.StripPrefix("/api", protectedHandler))
 
 	commonHandler := core_middleware.CommonMiddleware(common, log)
 
+	websocket := http.NewServeMux()
+	websocket.Handle("GET /ws", wsServer)
+
+	websocketHandler := core_middleware.WebSocketMiddleware(websocket, log, sessionsService)
+
+	root := http.NewServeMux()
+	root.Handle("GET /ws", websocketHandler)
+	root.Handle("/", commonHandler)
+
 	log.Debug("init http server...")
-	httpServer := core_http_server.NewServer(commonHandler, log)
+	httpServer := core_http_server.NewServer(root, log)
 	if err := httpServer.Run(ctx); err != nil {
 		panic(err)
 	}

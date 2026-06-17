@@ -26,7 +26,8 @@ type FriendshipsRepository interface {
 }
 
 type ChatsWSTransport interface {
-	NotifyDeleteChat(userID int, chatID int)
+	NotifyDeletedChat(userID int, chatID int)
+	NotifyCreatedChat(userID int, chat domains.Chat)
 }
 
 func NewService(
@@ -62,6 +63,11 @@ func (s *ChatsService) CreateOrGetChat(ctx context.Context, userID int, friendID
 	chat, err := s.chatsRep.SaveOrFind(ctx, userID, friendID)
 	if err != nil {
 		return domains.Chat{}, fmt.Errorf("failed to create or get chat: %w", err)
+	}
+
+	if chat.LastMessageContent == nil {
+		s.broadcaster.NotifyCreatedChat(chat.FirstUser.ID, chat)
+		s.broadcaster.NotifyCreatedChat(chat.SecondUser.ID, chat)
 	}
 
 	return chat, nil
@@ -107,8 +113,8 @@ func (s *ChatsService) DeleteChat(ctx context.Context, userID int, chatID int) e
 		return fmt.Errorf("failed to delete chat: %w", err)
 	}
 
-	s.broadcaster.NotifyDeleteChat(userID, deletedChat.FirstUser.ID)
-	s.broadcaster.NotifyDeleteChat(userID, deletedChat.SecondUser.ID)
+	s.broadcaster.NotifyDeletedChat(deletedChat.FirstUser.ID, chatID)
+	s.broadcaster.NotifyDeletedChat(deletedChat.SecondUser.ID, chatID)
 
 	return nil
 }

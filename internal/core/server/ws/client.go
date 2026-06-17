@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 )
 
 type Client struct {
@@ -40,8 +41,10 @@ func (c *Client) closeSocket() {
 
 func (c *Client) Read() {
 	defer func() {
-		c.closeSocket()
+		c.server.log.Debug("close read...")
 		c.server.leave <- c
+		c.closeSocket()
+		c.server.log.Debug("read is closed")
 	}()
 
 	c.socket.SetReadLimit(maxMessageSize)
@@ -54,6 +57,7 @@ func (c *Client) Read() {
 	for {
 		_, _, err := c.socket.ReadMessage()
 		if err != nil {
+			c.server.log.Debug("pong", zap.Error(err))
 			return
 		}
 
@@ -61,7 +65,11 @@ func (c *Client) Read() {
 }
 
 func (c *Client) Write() {
-	defer c.closeSocket()
+	defer func() {
+		c.server.log.Debug("close write...")
+		c.closeSocket()
+		c.server.log.Debug("write is closed")
+	}()
 
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
@@ -77,6 +85,7 @@ func (c *Client) Write() {
 			}
 
 			if err := c.socket.WriteMessage(websocket.TextMessage, msg); err != nil {
+				c.server.log.Debug("ping", zap.Error(err))
 				return
 			}
 		case <-ticker.C:

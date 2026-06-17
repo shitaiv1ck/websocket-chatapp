@@ -11,19 +11,47 @@ import (
 )
 
 const (
-	requestID = "X-Request-ID"
+	requestIDHeader = "X-Request-ID"
+	originHeader    = "Origin"
 )
+
+func CORS() Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			allowedOrigins := map[string]bool{
+				"http://localhost:8080": true,
+				"null":                  true,
+			}
+
+			origin := r.Header.Get(originHeader)
+
+			if _, ok := allowedOrigins[origin]; ok {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS")
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token")
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+			}
+
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
 
 func RequestID() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			id := r.Header.Get(requestID)
+			id := r.Header.Get(requestIDHeader)
 			if id == "" {
 				id = uuid.NewString()
-				r.Header.Set(requestID, id)
+				r.Header.Set(requestIDHeader, id)
 			}
 
-			w.Header().Set(requestID, id)
+			w.Header().Set(requestIDHeader, id)
 
 			next.ServeHTTP(w, r)
 		})
@@ -33,7 +61,7 @@ func RequestID() Middleware {
 func Logger(log *core_logger.Logger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			id := r.Header.Get(requestID)
+			id := r.Header.Get(requestIDHeader)
 
 			logger := log.With(
 				zap.String("request-id", id),
