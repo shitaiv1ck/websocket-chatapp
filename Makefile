@@ -41,7 +41,7 @@ migrate-force:
 
 app-run:
 	@go mod tidy && \
-	go run ${PROJECT_ROOT}/cmd/chat/main.go
+	go run ${PROJECT_ROOT}/cmd/chatapp/main.go
 
 app-deploy:
 	@docker compose up -d --build chat
