@@ -1,15 +1,24 @@
 # Структура проекта
 
 ```
-chat
+websocket-chatapp
+├─ Dockerfile
+├─ Makefile
 ├─ api.md
 ├─ architecture.md
 ├─ cmd
-│  └─ chat
+│  └─ chatapp
 │     └─ main.go
 ├─ docker-compose.yaml
 ├─ docs
-│  └─ diagram.png
+│  ├─ deletechat.gif
+│  ├─ deletefriendship.gif
+│  ├─ diagram.png
+│  ├─ dialog.gif
+│  ├─ patchuser.gif
+│  ├─ regandauth.gif
+│  ├─ searchusers.gif
+│  └─ sendacceptdeclinerequest.gif
 ├─ go.mod
 ├─ go.sum
 ├─ internal
@@ -119,11 +128,13 @@ chat
 │        └─ transport
 │           ├─ http
 │           │  ├─ dto.go
-│           │  └─ transport.go
+│           │  ├─ mocks
+│           │  │  └─ mock.go
+│           │  ├─ transport.go
+│           │  └─ transport_test.go
 │           └─ ws
 │              ├─ dto.go
 │              └─ transport.go
-├─ Makefile
 ├─ migrations
 │  ├─ 000001_init.down.sql
 │  └─ 000001_init.up.sql

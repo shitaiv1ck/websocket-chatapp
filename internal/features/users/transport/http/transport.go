@@ -12,6 +12,8 @@ import (
 	core_utils "github.com/shitaiv1ck/realtime-chat/internal/core/utils"
 )
 
+//go:generate mockgen -source=transport.go -destination=mocks/mock.go
+
 type UsersHTTPTransport struct {
 	service UsersService
 }
@@ -37,7 +39,9 @@ func (t *UsersHTTPTransport) CreateUserHandler() http.HandlerFunc {
 		log := core_logger.FromContext(r.Context())
 		responseHandler := core_repsponse.NewResponseWriter(w)
 
-		log.Debug("invoke CreateUser handler")
+		if log != nil {
+			log.Debug("invoke CreateUser handler")
+		}
 
 		var request CreateUserRequest
 		if err := core_request.DecodeAndValidate(r, &request); err != nil {
@@ -75,7 +79,9 @@ func (t *UsersHTTPTransport) GetMeHandler() http.HandlerFunc {
 		log := core_logger.FromContext(r.Context())
 		responseHandler := core_repsponse.NewResponseWriter(w)
 
-		log.Debug("invoke GetMe handler")
+		if log != nil {
+			log.Debug("invoke GetMe handler")
+		}
 
 		userID, err := core_utils.GetIntFromContext(r.Context(), "user_id")
 		if err != nil {
@@ -106,7 +112,9 @@ func (t *UsersHTTPTransport) GetUsersHandler() http.HandlerFunc {
 		log := core_logger.FromContext(r.Context())
 		responseHandler := core_repsponse.NewResponseWriter(w)
 
-		log.Debug("invoke GetUsers handler")
+		if log != nil {
+			log.Debug("invoke CreateUser handler")
+		}
 
 		search := core_request.GetStringQueryParam(r, "search")
 
@@ -144,7 +152,9 @@ func (t *UsersHTTPTransport) PatchUserHandler() http.HandlerFunc {
 		log := core_logger.FromContext(r.Context())
 		responseHandler := core_repsponse.NewResponseWriter(w)
 
-		log.Debug("invoke PatchUser handler")
+		if log != nil {
+			log.Debug("invoke CreateUser handler")
+		}
 
 		userID, err := core_utils.GetIntFromContext(r.Context(), "user_id")
 		if err != nil {
